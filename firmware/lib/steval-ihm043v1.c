@@ -1,6 +1,6 @@
 #include "steval-ihm043v1.h"
 
-gpio_pin TARGET_led_gpios[] = {
+const gpio_pin TARGET_led_gpios[] = {
     {
         .gp_port = GPIOA,
         .gp_pin  = GPIO11,

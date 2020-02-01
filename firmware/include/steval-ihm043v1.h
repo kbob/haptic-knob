@@ -12,8 +12,8 @@
     # error "STEVAL_IHM043V1 requires STM32F0 definitions"
 #endif
 
-extern gpio_pin     steval_ihm043v1_led_gpios[];
-extern const size_t steval_ihm043v1_led_gpio_count;
+extern const gpio_pin steval_ihm043v1_led_gpios[];
+extern const size_t   steval_ihm043v1_led_gpio_count;
 #define TARGET_led_gpios      steval_ihm043v1_led_gpios
 #define TARGET_led_gpio_count steval_ihm043v1_led_gpio_count
 

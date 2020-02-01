@@ -22,7 +22,7 @@ V := 1
 OPENCM3_DIR := ../../submodules/libopencm3
 VPATH       := ../lib
 
-SOURCES     := main.c systick.c gpio.c steval-ihm043v1.c
+SOURCES     := main.c systick.c gpio.c led.c steval-ihm043v1.c
 OBJS        := $(patsubst %.c,%.o,$(patsubst ../lib/%,%,$(SOURCES)))
 BINARY      := open-loop
 LDSCRIPT    := ../stm32f0-steval.ld
@@ -35,4 +35,4 @@ CPPFLAGS    += \
                -Wno-parentheses -Wno-array-bounds \
                -Werror -Wno-error=char-subscripts \
                -std=gnu11
-CPPFLAGS    += -I../include
+CPPFLAGS    += -I../include -DTARGET_H='"steval-ihm043v1.h"'
