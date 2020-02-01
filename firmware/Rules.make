@@ -79,7 +79,7 @@ SCRIPT_DIR	= $(OPENCM3_DIR)/scripts
 ###############################################################################
 # C flags
 
-CFLAGS		+= -O3 -g -ffast-math
+CFLAGS		+= -O0 -g -ffast-math
 CFLAGS		+= -Wextra -Wshadow -Wimplicit-function-declaration
 CFLAGS		+= -Wredundant-decls -Wmissing-prototypes -Wstrict-prototypes
 CFLAGS		+= -fno-common -ffunction-sections -fdata-sections
@@ -162,19 +162,19 @@ $(LDSCRIPT):
 
 %.elf %.map: $(OBJS) $(LDSCRIPT)
 	@#printf "  LD      $(*).elf\n"
-	$(Q)$(LD) $(LDFLAGS) $(ARCH_FLAGS) $(OBJS) $(LDLIBS) -o $(*).elf
+	$(Q)$(LD) $(LDFLAGS) $(ARCH_FLAGS) $(OBJS) $(LDLIBS) -o $@
 
 %.o: %.c
 	@#printf "  CC      $(*).c\n"
-	$(Q)$(CC) $(CFLAGS) $(CPPFLAGS) $(ARCH_FLAGS) -o $(*).o -c $(*).c
+	$(Q)$(CC) $(CFLAGS) $(CPPFLAGS) $(ARCH_FLAGS) -o $@ -c $<
 
 %.o: %.cxx
 	@#printf "  CXX     $(*).cxx\n"
-	$(Q)$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(ARCH_FLAGS) -o $(*).o -c $(*).cxx
+	$(Q)$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(ARCH_FLAGS) -o $@ -c $<
 
 %.o: %.cpp
 	@#printf "  CXX     $(*).cpp\n"
-	$(Q)$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(ARCH_FLAGS) -o $(*).o -c $(*).cpp
+	$(Q)$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(ARCH_FLAGS) -o $@ -c $<
 
 clean::
 	@#printf "  CLEAN\n"

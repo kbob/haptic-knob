@@ -20,14 +20,19 @@
 V := 1
 
 OPENCM3_DIR := ../../submodules/libopencm3
+VPATH       := ../lib
 
-SOURCES     := main.c
-OBJS        := $(SOURCES:.c=.o)
+SOURCES     := main.c systick.c gpio.c steval-ihm043v1.c
+OBJS        := $(patsubst %.c,%.o,$(patsubst ../lib/%,%,$(SOURCES)))
 BINARY      := open-loop
 LDSCRIPT    := ../stm32f0-steval.ld
 
+# $(error OBJS = $(OBJS))
+
 include ../Generic.make
 
-CPPFLAGS    += -Wno-parentheses -Wno-array-bounds \
+CPPFLAGS    += \
+               -Wno-parentheses -Wno-array-bounds \
                -Werror -Wno-error=char-subscripts \
                -std=gnu11
+CPPFLAGS    += -I../include

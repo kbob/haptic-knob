@@ -1,5 +1,23 @@
+# The project is structured as a set of "applications" which
+# each run on a single hardware target.  The apps all depend
+# on a common source library and on libopencm3.  libopencm3
+# is included as a git submodule.
+#
+# Runnning `make` at top level (this directory) will build
+# everything.  Each individual app can be installed on the
+# hardware using `gdb` in the app's directory.
+#
+# The common library is not built separately -- it is compiled
+# for each app for that app's target hardware.
+#
+# submodules/libopencm3 - root of libopencm3 submodule
+# src/lib               - root of common library
+# src/<app>             - root of one app
+
 OPENCM3_DIR := submodules/libopencm3
 OPENCM3_LIB := $(OPENCM3_DIR)/lib/libopencm3_stm32f0.a
+
+
 
 all: libopencm3
 
