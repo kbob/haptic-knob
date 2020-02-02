@@ -14,8 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <coremark.h>
+#include "printf.h"
+
+// #include <coremark.h>
+#include <stddef.h>
+typedef size_t ee_size_t;
+#define HAS_FLOAT 0
 #include <stdarg.h>
+
+#include "usart.h"
 
 #define ZEROPAD  	(1<<0)	/* Pad with zero */
 #define SIGN    	(1<<1)	/* Unsigned/signed long */
@@ -27,8 +34,8 @@ limitations under the License.
 
 #define is_digit(c) ((c) >= '0' && (c) <= '9')
 
-static char *digits = "0123456789abcdefghijklmnopqrstuvwxyz";
-static char *upper_digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+static char *const digits = "0123456789abcdefghijklmnopqrstuvwxyz";
+static char *const upper_digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 static ee_size_t strnlen(const char *s, ee_size_t count);
 
 static ee_size_t strnlen(const char *s, ee_size_t count)
@@ -54,7 +61,7 @@ static char *number(char *str, long num, int base, int size, int precision, int 
   if (type & UPPERCASE)  dig = upper_digits;
   if (type & LEFT) type &= ~ZEROPAD;
   if (base < 2 || base > 36) return 0;
-  
+
   c = (type & ZEROPAD) ? '0' : ' ';
   sign = 0;
   if (type & SIGN)
@@ -102,7 +109,7 @@ static char *number(char *str, long num, int base, int size, int precision, int 
   size -= precision;
   if (!(type & (ZEROPAD | LEFT))) while (size-- > 0) *str++ = ' ';
   if (sign) *str++ = sign;
-  
+
   if (type & HEX_PREP)
   {
     if (base == 8)
@@ -128,6 +135,7 @@ static char *eaddr(char *str, unsigned char *addr, int size, int precision, int 
   char *dig = digits;
   int i, len;
 
+  precision = precision;        // -Wunused-parameter
   if (type & UPPERCASE)  dig = upper_digits;
   len = 0;
   for (i = 0; i < 6; i++)
@@ -149,24 +157,25 @@ static char *iaddr(char *str, unsigned char *addr, int size, int precision, int 
   char tmp[24];
   int i, n, len;
 
+  precision = precision;        // -Wunused-parameter
   len = 0;
   for (i = 0; i < 4; i++)
   {
     if (i != 0) tmp[len++] = '.';
     n = addr[i];
-    
+
     if (n == 0)
       tmp[len++] = digits[0];
     else
     {
-      if (n >= 100) 
+      if (n >= 100)
       {
         tmp[len++] = digits[n / 100];
         n = n % 100;
         tmp[len++] = digits[n / 10];
         n = n % 10;
       }
-      else if (n >= 10) 
+      else if (n >= 10)
       {
         tmp[len++] = digits[n / 10];
         n = n % 10;
@@ -187,8 +196,8 @@ static char *iaddr(char *str, unsigned char *addr, int size, int precision, int 
 
 char *ecvtbuf(double arg, int ndigits, int *decpt, int *sign, char *buf);
 char *fcvtbuf(double arg, int ndigits, int *decpt, int *sign, char *buf);
-static void ee_bufcpy(char *d, char *s, int count); 
- 
+static void ee_bufcpy(char *d, char *s, int count);
+
 void ee_bufcpy(char *pd, char *ps, int count) {
 	char *pe=ps+count;
 	while (ps!=pe)
@@ -198,7 +207,7 @@ void ee_bufcpy(char *pd, char *ps, int count) {
 static void parse_float(double value, char *buffer, char fmt, int precision)
 {
   int decpt, sign, exp, pos;
-  char *digits = NULL;
+  char *adigits = NULL;
   char cvtbuf[80];
   int capexp = 0;
   int magnitude;
@@ -211,7 +220,7 @@ static void parse_float(double value, char *buffer, char fmt, int precision)
 
   if (fmt == 'g')
   {
-    digits = ecvtbuf(value, precision, &decpt, &sign, cvtbuf);
+    adigits = ecvtbuf(value, precision, &decpt, &sign, cvtbuf);
     magnitude = decpt - 1;
     if (magnitude < -4  ||  magnitude > precision - 1)
     {
@@ -227,12 +236,12 @@ static void parse_float(double value, char *buffer, char fmt, int precision)
 
   if (fmt == 'e')
   {
-    digits = ecvtbuf(value, precision + 1, &decpt, &sign, cvtbuf);
+    adigits = ecvtbuf(value, precision + 1, &decpt, &sign, cvtbuf);
 
     if (sign) *buffer++ = '-';
-    *buffer++ = *digits;
+    *buffer++ = *adigits;
     if (precision > 0) *buffer++ = '.';
-    ee_bufcpy(buffer, digits + 1, precision);
+    ee_bufcpy(buffer, adigits + 1, precision);
     buffer += precision;
     *buffer++ = capexp ? 'E' : 'e';
 
@@ -263,24 +272,24 @@ static void parse_float(double value, char *buffer, char fmt, int precision)
   }
   else if (fmt == 'f')
   {
-    digits = fcvtbuf(value, precision, &decpt, &sign, cvtbuf);
+    adigits = fcvtbuf(value, precision, &decpt, &sign, cvtbuf);
     if (sign) *buffer++ = '-';
-    if (*digits)
+    if (*adigits)
     {
       if (decpt <= 0)
       {
         *buffer++ = '0';
         *buffer++ = '.';
         for (pos = 0; pos < -decpt; pos++) *buffer++ = '0';
-        while (*digits) *buffer++ = *digits++;
+        while (*adigits) *buffer++ = *adigits++;
       }
       else
       {
         pos = 0;
-        while (*digits)
+        while (*adigits)
         {
           if (pos++ == decpt) *buffer++ = '.';
-          *buffer++ = *digits++;
+          *buffer++ = *adigits++;
         }
       }
     }
@@ -310,7 +319,7 @@ static void decimal_point(char *buffer)
   if (*buffer)
   {
     int n = strnlen(buffer,256);
-    while (n > 0) 
+    while (n > 0)
     {
       buffer[n + 1] = buffer[n];
       n--;
@@ -419,7 +428,7 @@ static int ee_vsprintf(char *buf, const char *fmt, va_list args)
       *str++ = *fmt;
       continue;
     }
-                  
+
     // Process flags
     flags = 0;
 repeat:
@@ -432,7 +441,7 @@ repeat:
       case '#': flags |= HEX_PREP; goto repeat;
       case '0': flags |= ZEROPAD; goto repeat;
     }
-          
+
     // Get field width
     field_width = -1;
     if (is_digit(*fmt))
@@ -452,7 +461,7 @@ repeat:
     precision = -1;
     if (*fmt == '.')
     {
-      ++fmt;    
+      ++fmt;
       if (is_digit(*fmt))
         precision = skip_atoi(&fmt);
       else if (*fmt == '*')
@@ -560,18 +569,20 @@ repeat:
   return str - buf;
 }
 
-void uart_send_char(char c) {
-#error "You must implement the method uart_send_char to use this file!\n";
+static void uart_send_char(char c)
+{
+  USART_putchar(c);
+// #error "You must implement the method uart_send_char to use this file!\n";
 /*	Output of a char to a UART usually follows the following model:
 	Wait until UART is ready
 	Write char to UART
 	Wait until UART is done
-	
+
 	Or in code:
 	while (*UART_CONTROL_ADDRESS != UART_READY);
 	*UART_DATA_ADDRESS = c;
 	while (*UART_CONTROL_ADDRESS != UART_READY);
-	
+
 	Check the UART sample code on your platform or the board documentation.
 */
 }
@@ -594,4 +605,3 @@ int ee_printf(const char *fmt, ...)
 
   return n;
 }
-
