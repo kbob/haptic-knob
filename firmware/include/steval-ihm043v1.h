@@ -12,9 +12,16 @@
     # error "STEVAL_IHM043V1 requires STM32F0 definitions"
 #endif
 
+// LED
 extern const gpio_pin steval_ihm043v1_led_gpios[];
 extern const size_t   steval_ihm043v1_led_gpio_count;
 #define TARGET_led_gpios      steval_ihm043v1_led_gpios
 #define TARGET_led_gpio_count steval_ihm043v1_led_gpio_count
+
+// USART
+extern const gpio_pin steval_ihm043v1_usart_gpios[];
+extern const size_t   steval_ihm043v1_usart_gpio_count;
+#define TARGET_usart_gpios      steval_ihm043v1_usart_gpios
+#define TARGET_usart_gpio_count steval_ihm043v1_usart_gpio_count
 
 #endif /* !STEVAL_IHM043C1_included */
