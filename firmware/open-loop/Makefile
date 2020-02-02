@@ -22,7 +22,8 @@ V := 1
 OPENCM3_DIR := ../../submodules/libopencm3
 VPATH       := ../lib
 
-SOURCES     := main.c systick.c gpio.c led.c usart.c steval-ihm043v1.c
+SOURCES     := main.c ee_printf.c systick.c gpio.c led.c usart.c        \
+               systick.c steval-ihm043v1.c
 OBJS        := $(patsubst %.c,%.o,$(patsubst ../lib/%,%,$(SOURCES)))
 BINARY      := open-loop
 LDSCRIPT    := ../stm32f0-steval.ld
