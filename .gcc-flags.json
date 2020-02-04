@@ -1,0 +1,7 @@
+// settings for the Atom text editor's linter-gcc package
+{
+    "execPath": "~/lib/gcc-arm-none-eabi/bin/arm-none-eabi-gcc",
+    "gccErrorLimit": 10,
+    "gccIncludePath": "firmware/include",
+    "gccVersion7OrNewer": false
+}

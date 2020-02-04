@@ -20,21 +20,39 @@ static void handle_systick(uint32_t millis)
     }
 }
 
-#define CIRCLE_SUBDIVISION 1024
-// #define CIRCLE_SUBDIVISION 16
-#define QUADRANT_SUBDIVISION (CIRCLE_SUBDIVISION / 4)
+#define CIRCLE_BITS 10
+// #define CIRCLE_BITS 4
+#define QUADRANT_BITS (CIRCLE_BITS - 2)
+#define CIRCLE_SUBDIVISION (1 << CIRCLE_BITS)
+#define QUADRANT_SUBDIVISION (1 << QUADRANT_BITS)
 int16_t sin_table[QUADRANT_SUBDIVISION + 1];
 const size_t sin_table_size = (&sin_table)[1] - sin_table;
 
 static void init_sin_table(void)
 {
-    printf("sin_table_size = %u\n", sin_table_size);
     for (size_t i = 0; i < sin_table_size; i++) {
         float x = i * (2 * M_PI / CIRCLE_SUBDIVISION);
         sin_table[i] = sinf(x) * INT16_MAX;
-        printf("sin %u: %d\n", i, sin_table[i]);
     }
     printf("\n");
+}
+
+int16_t sini16(int n);
+int16_t sini16(int n)
+{
+    n &= CIRCLE_SUBDIVISION - 1;
+    int quadrant = n >> QUADRANT_BITS;
+    int index = n & (QUADRANT_SUBDIVISION - 1);
+    int sign = +1;
+    if (quadrant & 1) {
+        // 2nd and 4th quadrants: reverse index.
+        index = QUADRANT_SUBDIVISION - index;
+    }
+    if (quadrant & 2) {
+        // 3rd and 4th quadrants: negative.
+        sign = -1;
+    }
+    return sign * sin_table[index];
 }
 
 int main(void)
@@ -43,6 +61,8 @@ int main(void)
     init_systick(rcc_ahb_frequency);
     init_LED();
     init_USART(USART_BAUD);
+    printf("rcc_ahb_frequency = %lu\n", rcc_ahb_frequency);
+    printf("rcc_apb1_frequency = %lu\n", rcc_apb1_frequency);
 
     init_sin_table();
 
