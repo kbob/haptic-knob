@@ -6,6 +6,7 @@
 #include "gpio.h"
 #include TARGET_H
 
+
 // GPIOs
 //   PA8  AF2   TIM1_CH1    -> L6234 INA
 //   PA9  AF2   TIM1_CH2    -> L6234 INB
@@ -17,34 +18,35 @@
 //   PB14 AF2   TIM1_CH2N   -> L6234 ENB
 //   PB15 AF2   TIM1_CH3N   -> L6345 ENC
 
+
 // setup
 //
-// // Slave Mode Control Register
+// // SMCR - Slave Mode Control Register
 // //    bit 15 ETP:  External trigger inverted
 // //    bits 6:4 TS: trigger selection: external trigger input
 // TIM1->SMCR = b15+b4+b5+b6; // make ETR input active low
 //
-// // Control Register 2
+// // CR2 - Control Register 2
 // TIM1->CR2= 0;
 //
-// // Capture/COmpare Register x
+// // CCRx - Capture/COmpare Register x
 // //    bits 15:0 CCRx: capture/compare x value
 // TIM1->CCR1= 200;
 // TIM1->CCR2= 200;
 // TIM1->CCR3= 200;
 // TIM1->CCR4= 1100;
 //
-// // Auto-Reload Register
+// // ARR - Auto-Reload Register
 // //    bits 15:0 ARR: auto-reload value
 // TIM1->ARR=1200;
 //
-// // Control Register 1
+// // CR1 - Control Register 1
 // //    bits 6:5 CMS: edge-aligned mode
 // //    bit 4 DIR: count up
 // //    bit 0 CEN: counter enabled
 // TIM1->CR1=0x0001;
 //
-// // Capture/Compare Mode Register 1
+// // CCMR1 - Capture/Compare Mode Register 1
 // // note: b15 b7 and b7 are to enable ETR  based current limit
 // //    bit 15 OC2CE:    output compare 2 clear enable
 // //    bits 14:12 OC2M: PWM mode 1
@@ -54,7 +56,7 @@
 // //    bit 3 OC1PE:     output compare 1 preload enable
 // TIM1->CCMR1= 0x6868 +b15 + b7;
 //
-// // Capture/Compare Mode Register 2
+// // CCMR2 - Capture/Compare Mode Register 2
 // // note: b15 b7 and b7 are to enable ETR  based current limit
 // //    bits 14:12 OC4M: PWM mode 1
 // //    bit 11 OC3PE:    output compare 4 preload enable
@@ -63,33 +65,87 @@
 // //    bit 3 OC3PE:     output compare 3 preload enable
 // TIM1->CCMR2= 0x6868 +b7;
 //
-// // DMA/Interrupt Enable Register
+// // DIER - DMA/Interrupt Enable Register
 // //    bit 6 TIE:   trigger interrupt enable
 // //    bit 4 CC4IE: capture/compare 4 interrupt enable
 // TIM1->DIER = b4+b6;
 
 
+// // motorstartinit
+//
+// CCER - Capture/Compare Enable Register
+// //    bits 13:0 disable all
+// TIM1->CCER = 0;
+//
+// // BDTR - Break and Dead-Time Register
+// // b12 to enable brk input
+// // b13 for break polarity
+// // (b15+b11);  //  set MOE
+// //    bit 15    MOE:   main output enable
+// //    bit 13    BKP:   break polarity active high
+// //    bit 12    BKE:   break enable
+// //    bit 11    OSSR:  off-state selection for Run mode
+// //                     when inactive, OC/OCN enabled w/ inactive level
+// //    bit 10    OSSI:  off-state selection for Idle mode
+// //                     when inactive, OC/OCH outputs are forced
+// TIM1->BDTR= b15+b11+b10+b12+b13;  //  set MOE
+
+
 // // test overcurrent fault condition
-// // Break and Dead-Time Register
-// //    bit 15 MOE: main output enable
+//
+// // BDTR - Break and Dead-Time Register
+// //    bit 15 MOE:   main output enable
 // if ((TIM1->BDTR & b15) == 0)
 
+
 // // force stop
+//
 // // Break and Dead-Time Register
-// //    bit 15 MOE: main output enable
-// //    bit 13 BP: break polarity active high
-// //    bit 12 BKE: break enable
-// //    bit 11 OSSR: off-state selection for Run mode
-// //                 when inactive, OC/OCN outputs enabled w/ inactive level
-// //    bit 10 OSSI: off-state selection for Idle mode
-// //                 when inactive, OC/OCH outputs are forced
+// //    bit 15    MOE:   main output enable
+// //    bit 13    BKP:   break polarity active high
+// //    bit 12    BKE:   break enable
+// //    bit 11    OSSR:  off-state selection for Run mode
+// //                     when inactive, OC/OCN enabled w/ inactive level
+// //    bit 10    OSSI:  off-state selection for Idle mode
+// //                     when inactive, OC/OCH outputs are forced
 // TIM1->BDTR= b15+b11+b10+b12+b13;  // set MOE
 
-// // on commutate:
+
+// // commutate2:
 //
-// // Capture/Compare Enable Register
-// //    bit 11 CC3NP: CC3N output polarity active high on phases 0-3
-// //    bit 10 CC3NE: CC3N output enable
+// // CCER - Capture/Compare Enable Register
+// //    bit 11    CC3NP: OC3N output polarity active high on phases 0-3
+// //    bit 10    CC3NE: OC3N output enable on phases 0-3
+// //    bit  8    CC3E:  OC3 output enable (all phases)
+// //    bit  7    CC2NP: OC2N output polarity active high on phases 4-5, 0-1
+// //    bit  6    CC2NE: OC2N output enable on phases 4-5, 0-1
+// //    bit  4    CC2E:  OC2 output enable (all phases)
+// //    bit  3    CC1NP: OC1N output polarity active high on phases 2-5
+// //    bit  2    CC1NE: OC1N output enable on phases 2-5
+// //    bit  0    CC1E:  OC1 output enable (all phases)
+// // CCMR1 - Capture/Compare Mode Register 1
+// //    bit 15    OC2CE: OC2Ref cleared immediately on ETRF high
+// //    bit 14:12 OC2M:  output compare 2 mode
+// //                      100 - force low  (phases 5, 0)
+// //                      101 - force high (phases 1, 4)
+// //                      110 - PWM mode 1 (phases 2-3)
+// //    bit 11    OC2PE: output compare 2 preload enable (all phases)
+// //    bit  7    OC1CE: OC1Ref cleared immediately on ETRF high (all phases)
+// //    bits 6:4  OC1M:  output compare 1 mode
+// //                      100 - force low  (phases 3-4)
+// //                      101 - force high (phases 2, 5)
+// //                      110 - PWM mode 1 (phases 0-1)
+// //    bit  3    OC1PE: output compare 1 preload enable (all phases)
+// // CCMR2 - Capture/Compare Mode Register 2
+// //    bit 14:12 OC4M:  output compare 2 mode
+// //                      110 - PWM mode 1 (all phases)
+// //    bit 11    OC4PE: output compare 2 preload enable (all phases)
+// //    bit  7    OC3CE: OC1Ref cleared immediately on ETRF high (all phases)
+// //    bits 6:4  OC3M:  output compare 1 mode
+// //                      100 - force low  (phases 1-2)
+// //                      101 - force high (phases 0, 3)
+// //                      110 - PWM mode 1 (phases 4-5)
+// //    bit  3    OC3PE: output compare 1 preload enable (all phases)
 // switch(phase)
 //     {
 //     case 0: // phase AB
@@ -138,24 +194,23 @@
 
 void init_timer(const timer_config *cfg)
 {
-    cfg = cfg;
     uint32_t tim = TARGET_timer.base;
-    enum tim_oc_id oc = TIM_OC4;
     rcc_periph_clock_enable(TARGET_timer.clock);
     gpio_init_pins(TARGET_timer.gpios, TARGET_timer.gpio_count);
 
-    timer_set_mode(tim, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE, TIM_CR1_DIR_UP);
-    timer_set_prescaler(tim, 0);
-    timer_set_repetition_counter(tim, 0);
-    timer_disable_preload(tim);
-    timer_continuous_mode(tim);
-    timer_set_oc_value(tim, oc, 200);      // TIM->CCR4 = 200;
-    timer_set_period(tim, 1200);                // TIM->ARR = 1200;
-    timer_set_oc_mode(tim, oc, TIM_OCM_PWM1);
-    timer_set_oc_polarity_low(tim, oc);
-    timer_enable_oc_preload(tim, oc);
-    timer_enable_oc_output(tim, oc);
+    timer_set_period(tim, cfg->period);
+    if (cfg->enable_LED) {
+        enum tim_oc_id oc = TARGET_timer.LED_oc_id;
+        timer_set_oc_mode(tim, oc, TIM_OCM_PWM1);
+        timer_set_oc_polarity_low(tim, oc);
+        timer_enable_oc_preload(tim, oc);
+        timer_enable_oc_output(tim, oc);
+    }
     timer_enable_break_main_output(TIM1);
-    timer_enable_counter(tim);                  // TIM->CR1 |= 0b1;
-    timer_generate_event(tim, TIM_EGR_UG);
+    timer_enable_counter(tim);
+}
+
+void timer_set_LED_duty(uint16_t duty)
+{
+    timer_set_oc_value(TARGET_timer.base, TIM_OC4, duty);
 }

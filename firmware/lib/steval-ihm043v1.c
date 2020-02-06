@@ -43,6 +43,7 @@ const size_t TARGET_timer_gpio_count = ARRAY_COUNT(TARGET_timer_gpios);
 const timer TARGET_timer = {
         .base       = TIM1,
         .clock      = RCC_TIM1,
+        .LED_oc_id  = TIM_OC4,
         .gpios      = TARGET_timer_gpios,
         .gpio_count = ARRAY_COUNT(TARGET_timer_gpios),
 };
