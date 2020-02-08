@@ -26,11 +26,7 @@ extern const size_t             steval_ihm043v1_usart_gpio_count;
 #define TARGET_usart_gpio_count steval_ihm043v1_usart_gpio_count
 
 // Timer
-extern const gpio_pin           steval_ihm043v1_timer_gpios[];
-extern const size_t             steval_ihm043v1_timer_gpio_count;
-extern const timer              steval_ihm043v1_timer;
-#define TARGET_timer_gpios      steval_ihm043v1_timer_gpios
-#define TARGET_timer_gpio_count steval_ihm043v1_timer_gpio_count
-#define TARGET_timer            steval_ihm043v1_timer
+extern const timer_periph       steval_ihm043v1_advanced_timer;
+#define TARGET_advanced_timer   steval_ihm043v1_advanced_timer
 
 #endif /* !STEVAL_IHM043C1_included */

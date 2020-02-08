@@ -1,11 +1,16 @@
 #include "timer.h"
 
+#include <assert.h>
+
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/timer.h>
 
 #include "gpio.h"
-#include TARGET_H
 
+// // These notes decode ST's BLDC sensorless firmware, STSW-IHM043V1.
+// // The once-commented lines are from the firmware source; the
+// // twice-commented lines are my explanation of what all the register
+// // bit assignments are doing.
 
 // GPIOs
 //   PA8  AF2   TIM1_CH1    -> L6234 INA
@@ -192,25 +197,79 @@
 //         break;
 //     } // end of phase switch statement
 
-void init_timer(const timer_config *cfg)
+void init_timer(const timer *tp)
 {
-    uint32_t tim = TARGET_timer.base;
-    rcc_periph_clock_enable(TARGET_timer.clock);
-    gpio_init_pins(TARGET_timer.gpios, TARGET_timer.gpio_count);
-
-    timer_set_period(tim, cfg->period);
-    if (cfg->enable_LED) {
-        enum tim_oc_id oc = TARGET_timer.LED_oc_id;
-        timer_set_oc_mode(tim, oc, TIM_OCM_PWM1);
-        timer_set_oc_polarity_low(tim, oc);
-        timer_enable_oc_preload(tim, oc);
-        timer_enable_oc_output(tim, oc);
+    const timer_periph *tpp = tp->periph;
+    uint32_t tim = tpp->base;
+    for (size_t i = 0; i < tpp->out_channel_count; i++) {
+        assert(i == tpp->out_channels[i].id);
     }
-    timer_enable_break_main_output(TIM1);
+
+    rcc_periph_clock_enable(tpp->clock);
+    for (size_t i = 0; i < tpp->out_channel_count; i++) {
+        const timer_oc *op = &tpp->out_channels[i];
+        if (tp->enable_outputs & (1 << op->id))
+            gpio_init_pin(&op->gpio);
+    }
+
+    timer_set_period(tim, timer_period(tp));
+
+    for (size_t i = 0; i < tpp->out_channel_count; i++) {
+        const timer_oc *op = &tpp->out_channels[i];
+        if (tp->enable_outputs & (1 << op->id)) {
+            timer_enable_oc_preload(tim, op->id);
+            timer_enable_oc_output(tim, op->id);
+        }
+    }
+
+    timer_enable_break_main_output(tim);
     timer_enable_counter(tim);
+    // if (cfg->enable_LED) {
+    //     enum tim_oc_id oc = TARGET_timer.LED_oc_id;
+    //     timer_set_oc_mode(tim, oc, TIM_OCM_PWM1);
+    //     timer_set_oc_polarity_low(tim, oc);
+    //     timer_enable_oc_preload(tim, oc);
+    //     timer_enable_oc_output(tim, oc);
+    // }
+    // if (cfg->enable_motor) {
+    //     for (size_t i = 0; i < cfg->motor_pin_count; i++)
+    //     // oc_mode at commutation
+    //     // oc_polarity at commutation
+    //     // oc_preload true
+    //     // oc_output true
+    // }
+    // timer_enable_break_main_output(TIM1);
+    // timer_enable_counter(tim);
 }
 
-void timer_set_LED_duty(uint16_t duty)
+uint16_t timer_period(const timer *tp)
 {
-    timer_set_oc_value(TARGET_timer.base, TIM_OC4, duty);
+    uint32_t period = rcc_apb1_frequency / tp->pwm_freq;
+    assert(period < 65536);
+    return period;
 }
+
+void timer_force_output_high(const timer *tp, enum tim_oc_id oc)
+{
+    timer_set_oc_mode(tp->periph->base, oc, TIM_OCM_FORCE_HIGH);
+}
+
+void timer_force_output_low(const timer *tp, enum tim_oc_id oc)
+{
+    timer_set_oc_mode(tp->periph->base, oc, TIM_OCM_FORCE_LOW);
+}
+
+void timer_enable_pwm(const timer *tp, enum tim_oc_id oc)
+{
+    timer_set_oc_mode(tp->periph->base, oc, TIM_OCM_PWM1);
+}
+
+void timer_set_pwm_duty(const timer *tp, enum tim_oc_id oc, uint16_t duty)
+{
+    timer_set_oc_value(tp->periph->base, oc, duty);
+}
+
+// void timer_set_LED_duty(uint16_t duty)
+// {
+//     timer_set_oc_value(TARGET_timer.base, TIM_OC4, duty);
+// }

@@ -30,20 +30,82 @@ const gpio_pin TARGET_usart_gpios[] = {
 };
 const size_t TARGET_usart_gpio_count = ARRAY_COUNT(TARGET_usart_gpios);
 
-const gpio_pin TARGET_timer_gpios[] = {
-    {                           // PA11 - LED
-        .gp_port = GPIOA,
-        .gp_pin  = GPIO11,
-        .gp_mode = GPIO_MODE_AF,
-        .gp_af   = GPIO_AF2,
+static const timer_oc tim1_out_channels[] = {
+    [TIM_OC1] = {               // OC1 - PA8 -> L6234 INA
+        .id          = TIM_OC1,
+        .is_inverted = false,
+        .gpio = {
+            .gp_port = GPIOA,
+            .gp_pin  = GPIO8,
+            .gp_mode = GPIO_MODE_AF,
+            .gp_af   = GPIO_AF2,
+        },
+    },
+    [TIM_OC1N] = {              // OC1N - PB13 -> L6234 ENA
+        .id          = TIM_OC1N,
+        .is_inverted = false,
+        .gpio = {
+            .gp_port = GPIOB,
+            .gp_pin  = GPIO13,
+            .gp_mode = GPIO_MODE_AF,
+            .gp_af   = GPIO_AF2,
+        },
+    },
+    [TIM_OC2] = {               // OC2 - PA9 -> L6234 INB
+        .id          = TIM_OC2,
+        .is_inverted = false,
+        .gpio = {
+            .gp_port = GPIOA,
+            .gp_pin  = GPIO9,
+            .gp_mode = GPIO_MODE_AF,
+            .gp_af   = GPIO_AF2,
+        },
+    },
+    [TIM_OC2N] = {              // OC1N - PB14 -> L6234 ENB
+        .id          = TIM_OC2N,
+        .is_inverted = false,
+        .gpio = {
+            .gp_port = GPIOB,
+            .gp_pin  = GPIO14,
+            .gp_mode = GPIO_MODE_AF,
+            .gp_af   = GPIO_AF2,
+        },
+    },
+    [TIM_OC3] = {               // OC3 - PA10 -> L6234 INC
+        .id          = TIM_OC3,
+        .is_inverted = false,
+        .gpio = {
+            .gp_port = GPIOA,
+            .gp_pin  = GPIO10,
+            .gp_mode = GPIO_MODE_AF,
+            .gp_af   = GPIO_AF2,
+        },
+    },
+    [TIM_OC3N] = {              // OC3N - PB15 -> L6234 ENC
+        .id          = TIM_OC3N,
+        .is_inverted = false,
+        .gpio = {
+            .gp_port = GPIOB,
+            .gp_pin  = GPIO15,
+            .gp_mode = GPIO_MODE_AF,
+            .gp_af   = GPIO_AF2,
+        },
+    },
+    [TIM_OC4] = {
+        .id          = TIM_OC4,
+        .is_inverted = true,
+        .gpio = {
+            .gp_port = GPIOA,
+            .gp_pin  = GPIO11,
+            .gp_mode = GPIO_MODE_AF,
+            .gp_af   = GPIO_AF2,
+        },
     },
 };
-const size_t TARGET_timer_gpio_count = ARRAY_COUNT(TARGET_timer_gpios);
 
-const timer TARGET_timer = {
-        .base       = TIM1,
-        .clock      = RCC_TIM1,
-        .LED_oc_id  = TIM_OC4,
-        .gpios      = TARGET_timer_gpios,
-        .gpio_count = ARRAY_COUNT(TARGET_timer_gpios),
+const timer_periph TARGET_advanced_timer = {
+    .base       = TIM1,
+    .clock      = RCC_TIM1,
+    .out_channels = tim1_out_channels,
+    .out_channel_count = ARRAY_COUNT(tim1_out_channels),
 };
