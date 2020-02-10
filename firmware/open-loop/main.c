@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/timer.h>     // XXX
 
@@ -105,14 +106,14 @@ static void set(motor_gpio g, bool val)
 //     (val ? timer_force_output_high : timer_force_output_low)(&motor_timer, oc);
 // }
 
-static void set(enum tim_oc_id oc, bool val)
-{
-    const timer_periph *tpp = motor_timer.periph;
-    assert(oc < tpp->out_channel_count);
-    const timer_oc *tocp = &tpp->out_channels[oc];
-    const gpio_pin *tocgp = &tocp->gpio;
-    (val ? gpio_set : gpio_clear)(tocgp->gp_port, tocgp->gp_pin);
-}
+// static void set(enum tim_oc_id oc, bool val)
+// {
+//     const timer_periph *tpp = motor_timer.periph;
+//     assert(oc < tpp->out_channel_count);
+//     const timer_oc *tocp = &tpp->out_channels[oc];
+//     const gpio_pin *tocgp = &tocp->gpio;
+//     (val ? gpio_set : gpio_clear)(tocgp->gp_port, tocgp->gp_pin);
+// }
 
 static void control_gpio(enum tim_oc_id oc)
 {
@@ -129,6 +130,94 @@ static void control_gpio(enum tim_oc_id oc)
 }
 
 #endif /* MOTOR_OUT_TEST */
+
+static uint8_t phase;
+static uint32_t muphase;
+
+static void commutate(void)
+{
+    switch (phase) {
+
+    case 0:                     // phase 0 - A, B positive
+        gpio_set(GPIOA, GPIO8 | GPIO10);
+        gpio_clear(GPIOA, GPIO9);
+        break;
+
+    case 1:
+        gpio_set(GPIOA, GPIO8);
+        gpio_clear(GPIOA, GPIO9 | GPIO10);
+        break;
+
+    case 2:
+        gpio_set(GPIOA, GPIO8 | GPIO9);
+        gpio_clear(GPIOA, GPIO10);
+        break;
+
+    case 3:
+        gpio_set(GPIOA, GPIO9);
+        gpio_clear(GPIOA, GPIO8 | GPIO10);
+        break;
+
+    case 4:
+        gpio_set(GPIOA, GPIO9 | GPIO10);
+        gpio_clear(GPIOA, GPIO8);
+        break;
+
+    case 5:
+        gpio_set(GPIOA, GPIO10);
+        gpio_clear(GPIOA, GPIO8 | GPIO9);
+        break;
+
+    default:
+        assert(0 && "invalid phase");
+    }
+}
+
+extern void tim1_brk_up_trg_com_isr(void)
+{
+    timer_clear_flag(TIM1, TIM_SR_UIF);
+
+    // phase: 0..6
+    // angle: 0..1024
+    // muphase: 0..(240 * 1024)
+    // phase = muphase / (40 * 1024)
+    // angle = muphase / 1024
+    // phase to 6 in 240 steps
+    // muphase to (240 * 1024) in 240 steps; step size 1024
+    // angle to 1024 in 240 steps; step size 1024 / 240
+    // phase to 6 in 240 steps; step size 1 / 40
+    muphase += 1024;
+    if (muphase >= (240 * 1024))
+        muphase -= (240 * 1024);
+    uint8_t nphase = muphase / (40 * 1024);
+
+    if (phase != nphase) {
+        phase = nphase;
+        commutate();
+    }
+
+    // XXX calc once
+    uint32_t period = timer_period(&motor_timer);
+    // uint32_t inv_period = 65536 / period;
+
+    uint32_t angle_a = (muphase - 0 * 1024) / 240;
+    uint16_t duty_a = (abs(sini16(angle_a)) * (period - 2)) >> 15;
+    timer_set_pwm_duty(&motor_timer, TIM_OC1, duty_a);
+    uint32_t angle_b = (muphase + 160 * 1024) / 240;
+    uint16_t duty_b = (abs(sini16(angle_b)) * (period - 2)) >> 15;
+    timer_set_pwm_duty(&motor_timer, TIM_OC2, duty_b);
+    uint32_t angle_c = (muphase + 80 * 1024) / 240;
+    uint16_t duty_c = (abs(sini16(angle_c)) * (period - 2)) >> 15;
+    timer_set_pwm_duty(&motor_timer, TIM_OC3, duty_c);
+
+    // static uint32_t prev_ms;
+    // uint32_t ms = system_millis;
+    // if (prev_ms == ms)
+    //     return;
+    // prev_ms = ms;
+    // phase = (phase + 1) % 6;
+    // commutate();
+}
 
 int main(void)
 {
@@ -151,6 +240,8 @@ int main(void)
     timer_set_pwm_duty(&motor_timer, TIM_OC1, timer_period(&motor_timer) / 2);
     timer_set_pwm_duty(&motor_timer, TIM_OC2, timer_period(&motor_timer) / 2);
     timer_set_pwm_duty(&motor_timer, TIM_OC3, timer_period(&motor_timer) / 2);
+    timer_enable_irq(motor_timer.periph->base, TIM_DIER_UIE);
+    nvic_enable_irq(NVIC_TIM1_BRK_UP_TRG_COM_IRQ);
     // timer_force_output_high(&motor_timer, TIM_OC2);
     // timer_force_output_low(&motor_timer, TIM_OC3);
 
@@ -175,12 +266,8 @@ int main(void)
             set(ENC, (bool)(tick-2 & 1));
             set(INC, (bool)(tick-2 & 2));
 #else
-            // set(TIM_OC1N, (bool)(tick & 1));
-            set(TIM_OC1,  (bool)(tick & 2));
-            // set(TIM_OC2N, (bool)(tick-1 & 1));
-            set(TIM_OC2,  (bool)(tick-1 & 2));
-            // set(TIM_OC3N, (bool)(tick-2 & 1));
-            set(TIM_OC3,  (bool)(tick-2 & 2));
+    // phase = (phase + 1) % 6;
+    // commutate();
 #endif /* MOTOR_OUT_TEST */
         }
 
@@ -189,16 +276,16 @@ int main(void)
         next_time += 1000;
 
 #ifndef MOTOR_OUT_TEST
-    printf("CR1   %4lx  SR    %4lx  CCER  %4lx  RCR   %4lx  CCR4  %4lx\n",
-       TIM1_CR1,   TIM1_SR,    TIM1_CCER,  TIM1_RCR,   TIM1_CCR4);
-    printf("CR2   %4lx  EGR   %4lx  CNT   %4lx  CCR1  %4lx  BDTR  %4lx\n",
-       TIM1_CR2,   TIM1_EGR,   TIM1_CNT,   TIM1_CCR1,  TIM1_BDTR);
-    printf("SMCR  %4lx  CCMR1 %4lx  PSC   %4lx  CCR2  %4lx  DCR   %4lx\n",
-       TIM1_SMCR,  TIM1_CCMR1, TIM1_PSC,   TIM1_CCR2,  TIM1_DCR);
-    printf("DIER  %4lx  CCMR2 %4lx  ARR   %4lx  CCR3  %4lx  DMAR  %4lx\n",
-       TIM1_DIER,  TIM1_CCMR2, TIM1_ARR,   TIM1_CCR3,  TIM1_DMAR);
-    printf("\n");
-    printf("\33[A\33[A\33[A\33[A\33[A");
+printf("CR1   %4lx  SR    %4lx  CCER  %4lx  RCR   %4lx  CCR4  %4lx\n",
+   TIM1_CR1,   TIM1_SR,    TIM1_CCER,  TIM1_RCR,   TIM1_CCR4);
+printf("CR2   %4lx  EGR   %4lx  CNT   %4lx  CCR1  %4lx  BDTR  %4lx\n",
+   TIM1_CR2,   TIM1_EGR,   TIM1_CNT,   TIM1_CCR1,  TIM1_BDTR);
+printf("SMCR  %4lx  CCMR1 %4lx  PSC   %4lx  CCR2  %4lx  DCR   %4lx\n",
+   TIM1_SMCR,  TIM1_CCMR1, TIM1_PSC,   TIM1_CCR2,  TIM1_DCR);
+printf("DIER  %4lx  CCMR2 %4lx  ARR   %4lx  CCR3  %4lx  DMAR  %4lx\n",
+   TIM1_DIER,  TIM1_CCMR2, TIM1_ARR,   TIM1_CCR3,  TIM1_DMAR);
+printf("\n");
+printf("\33[A\33[A\33[A\33[A\33[A");
 #endif /* !MOTOR_OUT_TEST */
     }
 }
