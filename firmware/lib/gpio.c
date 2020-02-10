@@ -1,7 +1,6 @@
 #include "gpio.h"
 
 #include <assert.h>
-#include <stdbool.h>
 
 #include <libopencm3/stm32/rcc.h>
 

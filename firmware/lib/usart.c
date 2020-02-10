@@ -1,5 +1,3 @@
-// #define _GNU_SOURCE 1
-
 #include "usart.h"
 
 #include <limits.h>

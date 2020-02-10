@@ -35,12 +35,11 @@ typedef struct timer_periph {
 } timer_periph;
 
 // `timer` describes how an app uses a timer.  PWM frequency, outputs
-// in use, outputs with inverted polarity..
+// in use...
 typedef struct timer {
     const timer_periph *periph;
     uint32_t            pwm_freq;
     timer_output_bits   enable_outputs;
-    // timer_output_bits   inverted_outputs;
 } timer;
 
 extern void init_timer(const timer *);

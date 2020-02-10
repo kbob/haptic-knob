@@ -1,7 +1,6 @@
 #include "steval-ihm043v1.h"
 
 #include <libopencm3/stm32/rcc.h>
-#include <libopencm3/stm32/timer.h>
 
 #define ARRAY_COUNT(a) ((&(a))[1] - (a))
 
