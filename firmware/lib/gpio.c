@@ -16,7 +16,8 @@ static uint32_t gpio_clocks[] = {
     RCC_GPIOE,
     RCC_GPIOE,
     RCC_GPIOF,
-#ifdef RCC_GPIOH
+#ifdef RCC_GPIOG
+    RCC_GPIOG, 
     RCC_GPIOH,
     RCC_GPIOI,
     RCC_GPIOJ,
