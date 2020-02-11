@@ -8,6 +8,7 @@
 
 #include "gpio.h"
 #include "timer.h"
+#include "usart.h"
 
 #ifndef STM32F0
     # error "STEVAL_IHM043V1 requires STM32F0 definitions"
@@ -20,10 +21,8 @@ extern const size_t             steval_ihm043v1_led_gpio_count;
 #define TARGET_led_gpio_count   steval_ihm043v1_led_gpio_count
 
 // USART
-extern const gpio_pin           steval_ihm043v1_usart_gpios[];
-extern const size_t             steval_ihm043v1_usart_gpio_count;
-#define TARGET_usart_gpios      steval_ihm043v1_usart_gpios
-#define TARGET_usart_gpio_count steval_ihm043v1_usart_gpio_count
+extern const USART_periph       steval_ihm043v1_USART;
+#define TARGET_USART            steval_ihm043v1_USART
 
 // Timer
 extern const timer_periph       steval_ihm043v1_advanced_timer;

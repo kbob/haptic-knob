@@ -5,31 +5,33 @@
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/usart.h>
 
-#include "gpio.h"
 #include TARGET_H
 
-#define USART USART1
+static uint32_t default_USART;
 
-void init_USART(int baud)
+void init_USART(const USART *up)
 {
-    rcc_periph_clock_enable(RCC_USART1);
+    const USART_periph *upp = up->periph;
+    const uint32_t usart = upp->base;
+    if (!default_USART)
+        default_USART = usart;
 
-    gpio_init_pins(TARGET_usart_gpios, TARGET_usart_gpio_count);
-    usart_set_baudrate(USART, baud);
-    usart_set_databits(USART, 8);
-    usart_set_stopbits(USART, USART_STOPBITS_1);
-    usart_set_mode(USART, USART_MODE_TX_RX);
-    usart_set_parity(USART, USART_PARITY_NONE);
-    usart_set_flow_control(USART, USART_FLOWCONTROL_NONE);
-    usart_enable(USART);
-    USART1_CR1 |= USART_CR1_TE;
+    rcc_periph_clock_enable(upp->clock);
+
+    gpio_init_pin(&upp->tx);
+    gpio_init_pin(&upp->rx);
+
+    // Use default mode of 8 N 1, no flow control
+    usart_set_baudrate(usart, up->baud);
+    usart_set_mode(usart, USART_MODE_TX_RX);
+    usart_enable(usart);
 }
 
 void USART_putchar(int c)
 {
     if (c == '\n')
         USART_putchar('\r');
-    usart_send_blocking(USART, c);
+    usart_send_blocking(default_USART, c);
 }
 
 void USART_putstr(const char *s)
@@ -81,43 +83,3 @@ void USART_putbin(unsigned n)
     }
     USART_putchar('0' | n);
 }
-
-#if 0
-
-#include <stdio.h>
-
-static ssize_t USART_write(void *cookie, const char *buf, size_t size)
-{
-    cookie = cookie;            // -Wunused-parameter
-    for (size_t i = 0; i < size; i++) {
-        char c = buf[i];
-        if (c == '\n')
-            usart_send_blocking(USART, (uint16_t)'\r');
-        usart_send_blocking(USART, (uint16_t)c);
-    }
-    return size;
-}
-
-void USART_init_stdio(void)
-{
-    cookie_io_functions_t input_fns = {
-        .read  = NULL,
-        .write = NULL,
-        .seek  = NULL,
-        .close = NULL,
-    };
-    cookie_io_functions_t output_fns = {
-        .read  = NULL,
-        .write = USART_write,
-        .seek  = NULL,
-        .close = NULL,
-    };
-    stdin  = fopencookie(NULL, "r", input_fns);
-    stdout = fopencookie(NULL, "w", output_fns);
-    stderr = fopencookie(NULL, "w", output_fns);
-    // setlinebuf(stdout);
-    setbuf(stdout, NULL);
-    setbuf(stderr, NULL);
-}
-
-#endif

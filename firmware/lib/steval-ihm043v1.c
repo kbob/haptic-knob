@@ -1,6 +1,7 @@
 #include "steval-ihm043v1.h"
 
 #include <libopencm3/stm32/rcc.h>
+#include <libopencm3/stm32/usart.h>
 
 #define ARRAY_COUNT(a) ((&(a))[1] - (a))
 
@@ -13,24 +14,26 @@ const gpio_pin TARGET_led_gpios[] = {
 };
 const size_t TARGET_led_gpio_count = ARRAY_COUNT(TARGET_led_gpios);
 
-const gpio_pin TARGET_usart_gpios[] = {
-    {                           // PB6 TX
+const USART_periph TARGET_USART = {
+    .base = USART1,
+    .clock = RCC_USART1,
+    .tx = {                     // PB6 AF0 USART1_TX
         .gp_port = GPIOB,
         .gp_pin  = GPIO6,
         .gp_mode = GPIO_MODE_AF,
         .gp_af   = GPIO_AF0,
+
     },
-    {                           // PB7 RX
+    .rx = {                     // PB7 AF0 USART1_RX
         .gp_port = GPIOB,
         .gp_pin  = GPIO7,
         .gp_mode = GPIO_MODE_AF,
         .gp_af   = GPIO_AF0,
     },
 };
-const size_t TARGET_usart_gpio_count = ARRAY_COUNT(TARGET_usart_gpios);
 
 static const timer_oc tim1_out_channels[] = {
-    [TIM_OC1] = {               // OC1 - PA8 -> L6234 INA
+    [TIM_OC1] = {               // PA8 AF2 TIM1_CH1 -> L6234 INA
         .id          = TIM_OC1,
         .is_inverted = false,
         .gpio = {
@@ -40,7 +43,7 @@ static const timer_oc tim1_out_channels[] = {
             .gp_af   = GPIO_AF2,
         },
     },
-    [TIM_OC1N] = {              // OC1N - PB13 -> L6234 ENA
+    [TIM_OC1N] = {              // PB13 AF2 TIM1_CH1N -> L6234 ENA
         .id          = TIM_OC1N,
         .is_inverted = false,
         .gpio = {
@@ -50,7 +53,7 @@ static const timer_oc tim1_out_channels[] = {
             .gp_af   = GPIO_AF2,
         },
     },
-    [TIM_OC2] = {               // OC2 - PA9 -> L6234 INB
+    [TIM_OC2] = {               // PA9 AF2 TIM1_CH2 -> L6234 INB
         .id          = TIM_OC2,
         .is_inverted = false,
         .gpio = {
@@ -60,7 +63,7 @@ static const timer_oc tim1_out_channels[] = {
             .gp_af   = GPIO_AF2,
         },
     },
-    [TIM_OC2N] = {              // OC1N - PB14 -> L6234 ENB
+    [TIM_OC2N] = {              // PB14 AF2 TIM1_CH2N -> L6234 ENB
         .id          = TIM_OC2N,
         .is_inverted = false,
         .gpio = {
@@ -70,7 +73,7 @@ static const timer_oc tim1_out_channels[] = {
             .gp_af   = GPIO_AF2,
         },
     },
-    [TIM_OC3] = {               // OC3 - PA10 -> L6234 INC
+    [TIM_OC3] = {               // PA10 AF2 TIM1_CH3 -> L6234 INC
         .id          = TIM_OC3,
         .is_inverted = false,
         .gpio = {
@@ -80,7 +83,7 @@ static const timer_oc tim1_out_channels[] = {
             .gp_af   = GPIO_AF2,
         },
     },
-    [TIM_OC3N] = {              // OC3N - PB15 -> L6234 ENC
+    [TIM_OC3N] = {              // PB15 AF2N TIM1_CH3N -> L6234 ENC
         .id          = TIM_OC3N,
         .is_inverted = false,
         .gpio = {
@@ -90,7 +93,7 @@ static const timer_oc tim1_out_channels[] = {
             .gp_af   = GPIO_AF2,
         },
     },
-    [TIM_OC4] = {
+    [TIM_OC4] = {               // PA11 AF2 TIM1_CH4 -> LED (active low)
         .id          = TIM_OC4,
         .is_inverted = true,
         .gpio = {

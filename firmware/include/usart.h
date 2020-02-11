@@ -1,8 +1,22 @@
 #ifndef USART_included
 #define USART_included
 
-extern void init_USART(int baud);
-extern void USART_init_stdio(void);
+#include <stdint.h>
+
+#include "gpio.h"
+
+typedef struct USART_periph {
+    uint32_t            base;
+    uint32_t            clock;
+    gpio_pin            tx, rx;
+} USART_periph;
+
+typedef struct USART {
+    const USART_periph *periph;
+    uint32_t            baud;
+} USART;
+
+extern void init_USART(const USART *);
 
 extern void USART_puts(const char *);
 extern void USART_putchar(int);

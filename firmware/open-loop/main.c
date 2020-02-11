@@ -10,7 +10,12 @@
 #include "usart.h"
 #include TARGET_H
 
-const int USART_BAUD = 115200;
+// const int USART_BAUD = 115200;
+
+static const USART console_USART = {
+    .periph         = &TARGET_USART,
+    .baud           = 115200,
+};
 
 static const timer motor_timer = {
     .periph         = &TARGET_advanced_timer,
@@ -119,6 +124,12 @@ extern void tim1_brk_up_trg_com_isr(void)
 
 static void dump_tim1_registers(void)
 {
+    static bool been_here;
+    if (!been_here) {
+        been_here = true;
+        printf("\n\n\n\n\n");
+    }
+    printf("\33[A\33[A\33[A\33[A\33[A");
     printf("TIM1 registers:\n");
     printf("    CR1   %4lx  SR    %4lx  CCER  %4lx  RCR   %4lx  CCR4  %4lx\n",
            TIM1_CR1,   TIM1_SR,    TIM1_CCER,  TIM1_RCR,   TIM1_CCR4);
@@ -128,13 +139,12 @@ static void dump_tim1_registers(void)
            TIM1_SMCR,  TIM1_CCMR1, TIM1_PSC,   TIM1_CCR2,  TIM1_DCR);
     printf("    DIER  %4lx  CCMR2 %4lx  ARR   %4lx  CCR3  %4lx  DMAR  %4lx\n",
            TIM1_DIER,  TIM1_CCMR2, TIM1_ARR,   TIM1_CCR3,  TIM1_DMAR);
-    printf("\33[A\33[A\33[A\33[A\33[A");
 }
 
 int main(void)
 {
     rcc_clock_setup_in_hse_8mhz_out_48mhz();
-    init_USART(USART_BAUD);
+    init_USART(&console_USART);
     printf("\n\n\n\n\n");
     printf("rcc_ahb_frequency = %lu\n", rcc_ahb_frequency);
     printf("rcc_apb1_frequency = %lu\n", rcc_apb1_frequency);
