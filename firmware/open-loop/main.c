@@ -49,50 +49,59 @@ static void control_gpio(enum tim_oc_id oc)
 static uint8_t phase;
 static uint32_t muphase;
 
-static uint32_t commutate(void)
-{
-    switch (phase) {
+static const uint32_t phase_polarity[6] = {
+        GPIO8         | GPIO10,
+        GPIO8,
+        GPIO8 | GPIO9,
+                GPIO9,
+                GPIO9 | GPIO10,
+                        GPIO10,
+};
 
-    case 0:                     // phase 0 - A, B positive
-        // gpio_set(GPIOA, GPIO8 | GPIO10);
-        // gpio_clear(GPIOA, GPIO9);
-        // break;
-        return GPIO8 | GPIO10;
-
-    case 1:
-        // gpio_set(GPIOA, GPIO8);
-        // gpio_clear(GPIOA, GPIO9 | GPIO10);
-        // break;
-        return GPIO8;
-
-    case 2:
-        // gpio_set(GPIOA, GPIO8 | GPIO9);
-        // gpio_clear(GPIOA, GPIO10);
-        // break;
-        return GPIO8 | GPIO9;
-
-    case 3:
-        // gpio_set(GPIOA, GPIO9);
-        // gpio_clear(GPIOA, GPIO8 | GPIO10);
-        // break;
-        return GPIO9;
-
-    case 4:
-        // gpio_set(GPIOA, GPIO9 | GPIO10);
-        // gpio_clear(GPIOA, GPIO8);
-        // break;
-        return GPIO9 | GPIO10;
-
-    case 5:
-        // gpio_set(GPIOA, GPIO10);
-        // gpio_clear(GPIOA, GPIO8 | GPIO9);
-        // break;
-        return GPIO10;
-
-    default:
-        assert(0 && "invalid phase");
-    }
-}
+// static uint32_t commutate(void)
+// {
+//     switch (phase) {
+//
+//     case 0:                     // phase 0 - A, B positive
+//         // gpio_set(GPIOA, GPIO8 | GPIO10);
+//         // gpio_clear(GPIOA, GPIO9);
+//         // break;
+//         return GPIO8 | GPIO10;
+//
+//     case 1:
+//         // gpio_set(GPIOA, GPIO8);
+//         // gpio_clear(GPIOA, GPIO9 | GPIO10);
+//         // break;
+//         return GPIO8;
+//
+//     case 2:
+//         // gpio_set(GPIOA, GPIO8 | GPIO9);
+//         // gpio_clear(GPIOA, GPIO10);
+//         // break;
+//         return GPIO8 | GPIO9;
+//
+//     case 3:
+//         // gpio_set(GPIOA, GPIO9);
+//         // gpio_clear(GPIOA, GPIO8 | GPIO10);
+//         // break;
+//         return GPIO9;
+//
+//     case 4:
+//         // gpio_set(GPIOA, GPIO9 | GPIO10);
+//         // gpio_clear(GPIOA, GPIO8);
+//         // break;
+//         return GPIO9 | GPIO10;
+//
+//     case 5:
+//         // gpio_set(GPIOA, GPIO10);
+//         // gpio_clear(GPIOA, GPIO8 | GPIO9);
+//         // break;
+//         return GPIO10;
+//
+//     default:
+//         assert(0 && "invalid phase");
+//     }
+// }
 
 #include <libopencm3/cm3/systick.h>
 
@@ -182,7 +191,8 @@ uint32_t tmp_caa = STK_CVR;
     if (phase != nphase) {
         phase = nphase;
         pwm_update.phase_changed = true;
-        pwm_update.positive_signals = commutate();
+        // pwm_update.positive_signals = commutate();
+        pwm_update.positive_signals = phase_polarity[nphase];
     } else
         pwm_update.phase_changed = false;
 
