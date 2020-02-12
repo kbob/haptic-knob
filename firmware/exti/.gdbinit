@@ -10,3 +10,7 @@ define lr
   load
   run
 end
+define lq
+  load
+  quit
+end

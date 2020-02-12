@@ -247,10 +247,3 @@ int main(void)
     nbins = sort_histogram(&h);
     lines += print_histogram(&h, nbins, "Background Timing");
 }
-
-void __assert_func(const char *file, int line, const char *fn, const char *msg)
-{
-    printf("Assertion failed: %s, function %s, file %s, line %d\n",
-           msg, fn, file, line);
-    abort();
-}

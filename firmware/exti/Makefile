@@ -22,9 +22,9 @@ V := 1
 OPENCM3_DIR := ../../submodules/libopencm3
 VPATH       := ../lib
 
-SOURCES     := main.c ee_printf.c gpio.c led.c                          \
+SOURCES     := main.c ee_printf.c gpio.c led.c print-assert.c           \
                usart.c steval-ihm043v1.c
-OBJS        := $(patsubst %.c,%.o,$(patsubst ../lib/%,%,$(SOURCES)))
+OBJS        := $(patsubst ../lib/%,%,$(SOURCES:.c=.o))
 BINARY      := exti
 LDLIBS      := -lm
 LDSCRIPT    := ../stm32f0-steval.ld

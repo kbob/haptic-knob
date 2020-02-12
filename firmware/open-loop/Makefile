@@ -22,14 +22,13 @@ V := 1
 OPENCM3_DIR := ../../submodules/libopencm3
 VPATH       := ../lib
 
-SOURCES     := main.c ee_printf.c gpio.c led.c math.c systick.c         \
-               timer.c usart.c steval-ihm043v1.c
-OBJS        := $(patsubst %.c,%.o,$(patsubst ../lib/%,%,$(SOURCES)))
+SOURCES     := main.c ee_printf.c gpio.c led.c math.c print-assert.c    \
+               systick.c timer.c usart.c steval-ihm043v1.c
+OBJS        := $(patsubst ../lib/%,%,$(SOURCES:.c=.o))
+
 BINARY      := open-loop
 LDLIBS      := -lm
 LDSCRIPT    := ../stm32f0-steval.ld
-
-# $(error OBJS = $(OBJS))
 
 include ../Generic.make
 

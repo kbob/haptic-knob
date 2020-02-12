@@ -4,7 +4,6 @@
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/rcc.h>
 
-#include "intr.h"
 #include "math.h"
 #include "printf.h"
 #include "systick.h"
@@ -57,51 +56,6 @@ static const uint32_t phase_polarity[6] = {
                 GPIO9 | GPIO10,
                         GPIO10,
 };
-
-// static uint32_t commutate(void)
-// {
-//     switch (phase) {
-//
-//     case 0:                     // phase 0 - A, B positive
-//         // gpio_set(GPIOA, GPIO8 | GPIO10);
-//         // gpio_clear(GPIOA, GPIO9);
-//         // break;
-//         return GPIO8 | GPIO10;
-//
-//     case 1:
-//         // gpio_set(GPIOA, GPIO8);
-//         // gpio_clear(GPIOA, GPIO9 | GPIO10);
-//         // break;
-//         return GPIO8;
-//
-//     case 2:
-//         // gpio_set(GPIOA, GPIO8 | GPIO9);
-//         // gpio_clear(GPIOA, GPIO10);
-//         // break;
-//         return GPIO8 | GPIO9;
-//
-//     case 3:
-//         // gpio_set(GPIOA, GPIO9);
-//         // gpio_clear(GPIOA, GPIO8 | GPIO10);
-//         // break;
-//         return GPIO9;
-//
-//     case 4:
-//         // gpio_set(GPIOA, GPIO9 | GPIO10);
-//         // gpio_clear(GPIOA, GPIO8);
-//         // break;
-//         return GPIO9 | GPIO10;
-//
-//     case 5:
-//         // gpio_set(GPIOA, GPIO10);
-//         // gpio_clear(GPIOA, GPIO8 | GPIO9);
-//         // break;
-//         return GPIO10;
-//
-//     default:
-//         assert(0 && "invalid phase");
-//     }
-// }
 
 #include <libopencm3/cm3/systick.h>
 
@@ -350,12 +304,4 @@ int main(void)
             dump_tim1_registers();
         }
     }
-}
-
-void __assert_func(const char *file, int line, const char *fn, const char *msg)
-{
-    cm_disable_interrupts();
-    printf("Assertion failed: %s, function %s, file %s, line %d\n",
-           msg, fn, file, line);
-    abort();
 }
