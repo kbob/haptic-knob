@@ -49,6 +49,7 @@ extern void timer_force_output_high(const timer *, enum tim_oc_id);
 extern void timer_force_output_low(const timer *, enum tim_oc_id);
 extern void timer_enable_pwm(const timer *, enum tim_oc_id);
 
+// XXX rename to `set_pulse_duration`.
 extern void timer_set_pwm_duty(const timer *, enum tim_oc_id, uint16_t duty);
 
 #endif /* !TIMER_included */

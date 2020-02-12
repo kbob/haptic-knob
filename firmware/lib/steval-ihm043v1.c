@@ -111,3 +111,8 @@ const timer_periph TARGET_advanced_timer = {
     .out_channels = tim1_out_channels,
     .out_channel_count = ARRAY_COUNT(tim1_out_channels),
 };
+
+void TARGET_trigger_sw_interrupt(void)
+{
+    EXTI_SWIER = TARGET_SW_EXTI;
+}

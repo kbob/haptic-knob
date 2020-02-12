@@ -6,6 +6,8 @@
 
 #include <stddef.h>
 
+#include <libopencm3/stm32/exti.h>
+
 #include "gpio.h"
 #include "timer.h"
 #include "usart.h"
@@ -27,5 +29,13 @@ extern const USART_periph       steval_ihm043v1_USART;
 // Timer
 extern const timer_periph       steval_ihm043v1_advanced_timer;
 #define TARGET_advanced_timer   steval_ihm043v1_advanced_timer
+
+// Software Interrupt
+#define STEVAL_IHM043V1_SW_EXTI EXTI2
+#define steval_ihm043v1_sw_isr  exti2_3_isr
+extern void                     steval_ihm043v1_trigger_sw_interrupt(void);
+#define TARGET_SW_EXTI          STEVAL_IHM043V1_SW_EXTI
+#define TARGET_sw_isr           steval_ihm043v1_sw_isr
+#define TARGET_trigger_sw_interrupt steval_ihm043v1_trigger_sw_interrupt
 
 #endif /* !STEVAL_IHM043C1_included */
