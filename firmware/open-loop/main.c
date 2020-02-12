@@ -48,14 +48,6 @@ static void control_gpio(enum tim_oc_id oc)
 static uint8_t phase;
 static uint32_t muphase;
 
-// static const uint32_t phase_polarity[6] = {
-//         GPIO8         | GPIO10,
-//         GPIO8,
-//         GPIO8 | GPIO9,
-//                 GPIO9,
-//                 GPIO9 | GPIO10,
-//                         GPIO10,
-// };
 static const uint32_t phase_polarity[6] = {
         GPIO8 | GPIO9,
         GPIO8,
@@ -65,22 +57,11 @@ static const uint32_t phase_polarity[6] = {
                 GPIO9,
 };
 
-#include <libopencm3/cm3/systick.h>
-
-volatile uint32_t tim1_sr;
-volatile uint32_t tim1_srx;
-volatile uint32_t caa, cbb, cr;
 volatile uint32_t cc_counter;
 volatile uint32_t sw_counter;
 
-static inline uint32_t div6(uint32_t n)
-{
-    uint32_t t0 = (n << 2) + n;
-    uint32_t t1 = (t0 << 8) + (t0 << 4) + t0;
-    uint32_t t2 = (t1 << 1) + n;
-    return t2 >> 14;
-}
-
+// `pwm_update` passes data from SW interrupt to timer interrupt.
+//
 // Timer ISR may read all fields when `pending`is true,
 // must clear `pending`.
 //
@@ -89,9 +70,9 @@ static inline uint32_t div6(uint32_t n)
 struct {
     volatile bool pending;
     bool          phase_changed;
-    uint32_t      duration_a;
-    uint32_t      duration_b;
-    uint32_t      duration_c;
+    uint32_t      width_a;
+    uint32_t      width_b;
+    uint32_t      width_c;
     uint32_t      positive_signals;
 } pwm_update;
 
@@ -99,15 +80,14 @@ extern void tim1_cc_isr(void)
 {
     timer_clear_flag(TIM1, TIM_SR_UIF | TIM_SR_CC4IF);
     cc_counter++;
-    tim1_sr = TIM1_SR;
     assert(!timer_get_flag(TIM1, TIM_SR_UIF));
 
     TARGET_trigger_sw_interrupt();
 
     if (pwm_update.pending) {
-        timer_set_pwm_duty(&motor_timer, TIM_OC1, pwm_update.duration_a);
-        timer_set_pwm_duty(&motor_timer, TIM_OC2, pwm_update.duration_b);
-        timer_set_pwm_duty(&motor_timer, TIM_OC3, pwm_update.duration_c);
+        timer_set_pwm_duty(&motor_timer, TIM_OC1, pwm_update.width_a);
+        timer_set_pwm_duty(&motor_timer, TIM_OC2, pwm_update.width_b);
+        timer_set_pwm_duty(&motor_timer, TIM_OC3, pwm_update.width_c);
         if (pwm_update.phase_changed) {
             uint32_t odr = GPIOA_ODR;
             odr &= ~(GPIO8 | GPIO9 | GPIO10);
@@ -120,15 +100,13 @@ extern void tim1_cc_isr(void)
     assert(!timer_get_flag(TIM1, TIM_SR_UIF));
 }
 
+__attribute__((optimize("O3")))
 extern void TARGET_sw_isr(void)
 {
-cr = STK_RVR;
-uint32_t tmp_caa = STK_CVR;
     exti_reset_request(TARGET_SW_EXTI);
     sw_counter++;
     if (pwm_update.pending)
         return;
-    assert(!pwm_update.pending);
 
     // In one cycle,
     //   phase runs from 0..6.
@@ -150,99 +128,32 @@ uint32_t tmp_caa = STK_CVR;
         muphase -= (6 << CIRCLE_BITS);
     uint8_t nphase = muphase >> CIRCLE_BITS;
 
-    if (phase != nphase) {
+    if (phase == nphase) {
+        pwm_update.phase_changed = false;
+    } else {
         phase = nphase;
         pwm_update.phase_changed = true;
-        // pwm_update.positive_signals = commutate();
         pwm_update.positive_signals = phase_polarity[nphase];
-    } else
-        pwm_update.phase_changed = false;
+    }
 
     // XXX calc once
     // XXX add amplitude parameter
-    uint32_t period = timer_period(&motor_timer);
-    // int32_t angle_a = (muphase - 0 * 1024) / 6;
-    int32_t angle_a = div6(muphase - 0 * 1024);
-    uint16_t duty_a = (abs(sini16(angle_a)) * (period - 2)) >> 15;
-    // timer_set_pwm_duty(&motor_timer, TIM_OC1, duty_a);
-    pwm_update.duration_a = duty_a;
-    int32_t angle_b = div6(muphase + 2 * 1024);
-    uint16_t duty_b = (abs(sini16(angle_b)) * (period - 2)) >> 15;
-    pwm_update.duration_b = duty_b;
-    // timer_set_pwm_duty(&motor_timer, TIM_OC2, duty_b);
-    int32_t angle_c = div6(muphase + 4 * 1024);
-    uint16_t duty_c = (abs(sini16(angle_c)) * (period - 2)) >> 15;
-    pwm_update.duration_c = duty_c;
-    // timer_set_pwm_duty(&motor_timer, TIM_OC3, duty_c);
+    uint32_t period  = timer_period(&motor_timer);
+    int32_t  angle_a = (muphase + 0 * 1024) / 6;
+    uint16_t width_a = (abs(sini16(angle_a)) * (period - 2)) >> 15;
+    int32_t  angle_b = (muphase + 2 * 1024) / 6;
+    uint16_t width_b = (abs(sini16(angle_b)) * (period - 2)) >> 15;
+    int32_t  angle_c = (muphase + 4 * 1024) / 6;
+    uint16_t width_c = (abs(sini16(angle_c)) * (period - 2)) >> 15;
 
+    pwm_update.width_a = width_a;
+    pwm_update.width_b = width_b;
+    pwm_update.width_c = width_c;
     pwm_update.pending = true;
 
     // // If the update happened, we are too slow.
     assert(!timer_get_flag(TIM1, TIM_SR_UIF));
-    tim1_srx = TIM1_SR;
-uint32_t tmp_cbb = STK_CVR;
-    static uint32_t prev_millis;
-    if (prev_millis != system_millis) {
-        prev_millis = system_millis;
-
-    } else {
-        cbb = tmp_cbb;
-        caa = tmp_caa;
-    }
 }
-
-// extern void tim1_brk_up_trg_com_isr(void)
-// {
-//     assert(0 && "dead code");
-//     // // If the update happened, we are too slow.
-//     // assert(!(TIM1_SR & TIM_SR_UIF));
-//     // assert(!timer_get_flag(TIM1, TIM_SR_UIF));
-//     // // assert(!timer_interrupt_source(TIM1, TIM_SR_UIF));
-//     // timer_clear_flag(TIM1, TIM_SR_UIF | TIM_SR_CC4IF);
-//
-//     // In one cycle,
-//     //   phase runs from 0..6.
-//     //   angle runs from 0..1024.
-//     //   muphase (microphase) runs from 0..(240 * 1024) = .
-//
-//
-//     // phase: 0..6
-//     // angle: 0..1024
-//     // muphase: 0..(6 * 1024)
-//     // phase = muphase / 1024
-//     // angle = muphase / 6
-//     // phase to 6 in 240 steps
-//     // muphase to (240 * 1024) in 240 steps; step size 1024
-//     // angle to 1024 in 240 steps; step size 1024 / 240
-//     // phase to 6 in 240 steps; step size 1 / 40
-//     muphase += 1024;
-//     if (muphase >= (6 * 1024))
-//         muphase -= (6 * 1024);
-//     uint8_t nphase = muphase / (1024);
-//
-//     if (phase != nphase) {
-//         phase = nphase;
-//         commutate();
-//     }
-//
-//     // XXX calc once
-//     // XXX add amplitude parameter
-//     uint32_t period = timer_period(&motor_timer);
-//
-//     int32_t angle_a = (muphase - 0 * 1024) / 6;
-//     uint16_t duty_a = (abs(sini16(angle_a)) * (period - 2)) >> 15;
-//     timer_set_pwm_duty(&motor_timer, TIM_OC1, duty_a);
-//     int32_t angle_b = (muphase + 4 * 1024) / 6;
-//     uint16_t duty_b = (abs(sini16(angle_b)) * (period - 2)) >> 15;
-//     timer_set_pwm_duty(&motor_timer, TIM_OC2, duty_b);
-//     int32_t angle_c = (muphase + 2 * 1024) / 6;
-//     uint16_t duty_c = (abs(sini16(angle_c)) * (period - 2)) >> 15;
-//     timer_set_pwm_duty(&motor_timer, TIM_OC3, duty_c);
-//
-//     // If the update happened, we are too slow.
-//     // assert(!timer_get_flag(TIM1, TIM_SR_UIF));
-//     timer_clear_flag(TIM1, TIM_SR_UIF | TIM_SR_CC4IF);
-// }
 
 static void dump_tim1_registers(void)
 {
