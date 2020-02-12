@@ -48,13 +48,21 @@ static void control_gpio(enum tim_oc_id oc)
 static uint8_t phase;
 static uint32_t muphase;
 
+// static const uint32_t phase_polarity[6] = {
+//         GPIO8         | GPIO10,
+//         GPIO8,
+//         GPIO8 | GPIO9,
+//                 GPIO9,
+//                 GPIO9 | GPIO10,
+//                         GPIO10,
+// };
 static const uint32_t phase_polarity[6] = {
-        GPIO8         | GPIO10,
-        GPIO8,
         GPIO8 | GPIO9,
-                GPIO9,
-                GPIO9 | GPIO10,
+        GPIO8,
+        GPIO8         | GPIO10,
                         GPIO10,
+                GPIO9 | GPIO10,
+                GPIO9,
 };
 
 #include <libopencm3/cm3/systick.h>
@@ -158,11 +166,11 @@ uint32_t tmp_caa = STK_CVR;
     uint16_t duty_a = (abs(sini16(angle_a)) * (period - 2)) >> 15;
     // timer_set_pwm_duty(&motor_timer, TIM_OC1, duty_a);
     pwm_update.duration_a = duty_a;
-    int32_t angle_b = div6(muphase + 4 * 1024);
+    int32_t angle_b = div6(muphase + 2 * 1024);
     uint16_t duty_b = (abs(sini16(angle_b)) * (period - 2)) >> 15;
     pwm_update.duration_b = duty_b;
     // timer_set_pwm_duty(&motor_timer, TIM_OC2, duty_b);
-    int32_t angle_c = div6(muphase + 2 * 1024);
+    int32_t angle_c = div6(muphase + 4 * 1024);
     uint16_t duty_c = (abs(sini16(angle_c)) * (period - 2)) >> 15;
     pwm_update.duration_c = duty_c;
     // timer_set_pwm_duty(&motor_timer, TIM_OC3, duty_c);
