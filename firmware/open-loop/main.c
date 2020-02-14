@@ -66,7 +66,7 @@ static const uint32_t phase_polarity[6] = {
                 GPIO9,
 };
 
-volatile uint32_t cc_counter;
+volatile uint32_t tim_counter;
 volatile uint32_t sw_counter;
 volatile uint32_t up_counter;
 
@@ -88,10 +88,10 @@ struct {
 
 // Compiling this function "-O3" makes it slower.  Reason unknown.
 __attribute__((optimize("O0")))
-extern void tim1_cc_isr(void)
+extern void tim1_brk_up_trg_com_isr(void)
 {
-    timer_clear_flag(TIM1, TIM_SR_UIF | TIM_SR_CC4IF);
-    cc_counter++;
+    timer_clear_flag(TIM1, TIM_SR_UIF);
+    tim_counter++;
     assert(!timer_get_flag(TIM1, TIM_SR_UIF));
 
     TARGET_trigger_sw_interrupt();
@@ -183,8 +183,8 @@ int main(void)
 
     init_sin_table();
 
-    // Timer CC has highest priority, then systick, then SW interrupt.
-    nvic_set_priority(NVIC_TIM1_CC_IRQ, 0x00);
+    // Timer update has highest priority, then systick, then SW interrupt.
+    nvic_set_priority(NVIC_TIM1_BRK_UP_TRG_COM_IRQ, 0x00);
     nvic_set_priority(NVIC_SYSTICK_IRQ, 0x40);
     nvic_set_priority(TARGET_SWINT_IRQ, 0xC0);
 
@@ -200,16 +200,14 @@ int main(void)
     control_gpio(TIM_OC2);
     control_gpio(TIM_OC3);
 
-    nvic_enable_irq(NVIC_TIM1_CC_IRQ);
+    nvic_enable_irq(NVIC_TIM1_BRK_UP_TRG_COM_IRQ);
     init_timer(&motor_timer);
     timer_enable_pwm(&motor_timer, TIM_OC1);
     timer_enable_pwm(&motor_timer, TIM_OC2);
     timer_enable_pwm(&motor_timer, TIM_OC3);
-    timer_enable_pwm(&motor_timer, TIM_OC4);
     uint32_t period = timer_period(&motor_timer);
     printf("timer period = %lu\n", period);
-    timer_set_pulse_width(&motor_timer, TIM_OC4, 1);
-    timer_enable_irq(motor_timer.periph->base, TIM_DIER_CC4IE);
+    timer_enable_irq(motor_timer.periph->base, TIM_DIER_UIE);
 
     uint32_t next_time = system_millis;
 
