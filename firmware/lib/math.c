@@ -3,6 +3,8 @@
 #include <math.h>
 #include <stddef.h>
 
+// sin_table holds 32767 * sin(alpha), where 0 <= alpha <= pi/2.
+// Note that both endpoints, 0 and pi/2, are present.
 static int16_t sin_table[QUADRANT_SUBDIVISION + 1];
 static const size_t sin_table_size = (&sin_table)[1] - sin_table;
 
@@ -14,11 +16,11 @@ void init_sin_table(void)
     }
 }
 
-int16_t sini16(int n)
+int16_t sini16(int alpha)
 {
-    n &= CIRCLE_SUBDIVISION - 1;
-    int quadrant = n >> QUADRANT_BITS;
-    int index = n & (QUADRANT_SUBDIVISION - 1);
+    alpha &= CIRCLE_SUBDIVISION - 1;
+    int quadrant = alpha >> QUADRANT_BITS;
+    int index = alpha & (QUADRANT_SUBDIVISION - 1);
     int sign = +1;
     if (quadrant & 1) {
         // 2nd and 4th quadrants: reverse index.

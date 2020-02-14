@@ -55,7 +55,7 @@ void timer_enable_pwm(const timer *tp, enum tim_oc_id oc)
     timer_set_oc_mode(tp->periph->base, oc, TIM_OCM_PWM1);
 }
 
-void timer_set_pwm_duty(const timer *tp, enum tim_oc_id oc, uint16_t duty)
+void timer_set_pulse_width(const timer *tp, enum tim_oc_id oc, uint16_t width)
 {
-    timer_set_oc_value(tp->periph->base, oc, duty);
+    timer_set_oc_value(tp->periph->base, oc, width);
 }

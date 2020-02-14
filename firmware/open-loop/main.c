@@ -40,11 +40,20 @@ static void control_gpio(enum tim_oc_id oc)
     gpio_init_pin(&g);
 }
 
-//      ;       ;       ;       ;       ;       ;       ;       ;       ;
 // We generate 3 sine waves for the motor's 3 poles.  They are 120
-// degrees apart.  We divide the circle into (CIRCLE_SUBDIVISION *
-// 6
+// degrees apart.  We subdivide the circle into six phases -- each
+// phase starts where one of the sines crosses zero: so at 0,npi/3,
+// 2pi/3, pi, 4pi/3, and 5pi/3.
 //
+// `phase` goes from 0 to 5.  `muphase` (microphase) goes from 0
+// to (CIRCLE_SUBDIVISION * 6) - 1.
+//
+// `phase` can be calculated by dividing `muphase` by
+// CIRCLE_SUBDIVISION, and angle can be calculated by diving `muphase`
+// by 6.
+//
+// `phase_polarity` maps `phase` onto the subset of waveforms that
+// are positive in that phase.
 static uint8_t phase;
 static uint32_t muphase;
 
@@ -59,6 +68,7 @@ static const uint32_t phase_polarity[6] = {
 
 volatile uint32_t cc_counter;
 volatile uint32_t sw_counter;
+volatile uint32_t up_counter;
 
 // `pwm_update` passes data from SW interrupt to timer interrupt.
 //
@@ -76,6 +86,8 @@ struct {
     uint32_t      positive_signals;
 } pwm_update;
 
+// Compiling this function "-O3" makes it slower.  Reason unknown.
+__attribute__((optimize("O0")))
 extern void tim1_cc_isr(void)
 {
     timer_clear_flag(TIM1, TIM_SR_UIF | TIM_SR_CC4IF);
@@ -85,9 +97,9 @@ extern void tim1_cc_isr(void)
     TARGET_trigger_sw_interrupt();
 
     if (pwm_update.pending) {
-        timer_set_pwm_duty(&motor_timer, TIM_OC1, pwm_update.width_a);
-        timer_set_pwm_duty(&motor_timer, TIM_OC2, pwm_update.width_b);
-        timer_set_pwm_duty(&motor_timer, TIM_OC3, pwm_update.width_c);
+        timer_set_pulse_width(&motor_timer, TIM_OC1, pwm_update.width_a);
+        timer_set_pulse_width(&motor_timer, TIM_OC2, pwm_update.width_b);
+        timer_set_pulse_width(&motor_timer, TIM_OC3, pwm_update.width_c);
         if (pwm_update.phase_changed) {
             uint32_t odr = GPIOA_ODR;
             odr &= ~(GPIO8 | GPIO9 | GPIO10);
@@ -105,23 +117,10 @@ extern void TARGET_sw_isr(void)
 {
     exti_reset_request(TARGET_SW_EXTI);
     sw_counter++;
-    if (pwm_update.pending)
+    if (pwm_update.pending) {
+        up_counter++;
         return;
-
-    // In one cycle,
-    //   phase runs from 0..6.
-    //   angle runs from 0..1024.
-    //   muphase (microphase) runs from 0..(240 * 1024) = .
-
-    // phase: 0..6
-    // angle: 0..1024
-    // muphase: 0..(6 * 1024)
-    // phase = muphase / 1024
-    // angle = muphase / 6
-    // phase to 6 in 240 steps
-    // muphase to (240 * 1024) in 240 steps; step size 1024
-    // angle to 1024 in 240 steps; step size 1024 / 240
-    // phase to 6 in 240 steps; step size 1 / 40
+    }
 
     muphase += 102;
     if (muphase >= (6 << CIRCLE_BITS))
@@ -183,15 +182,25 @@ int main(void)
     printf("rcc_apb1_frequency = %lu\n", rcc_apb1_frequency);
 
     init_sin_table();
+
+    // Timer CC has highest priority, then systick, then SW interrupt.
+    nvic_set_priority(NVIC_TIM1_CC_IRQ, 0x00);
+    nvic_set_priority(NVIC_SYSTICK_IRQ, 0x40);
+    nvic_set_priority(NVIC_EXTI2_3_IRQ, 0xC0);
+
+    // enable exti driver
+    nvic_enable_irq(NVIC_EXTI2_3_IRQ);
+    exti_enable_request(TARGET_SW_EXTI);
+
+    // enable systick
     init_systick(rcc_ahb_frequency);
     register_systick_handler(handle_systick);
 
-    nvic_set_priority(NVIC_EXTI2_3_IRQ, 0xC0);
+    control_gpio(TIM_OC1);
+    control_gpio(TIM_OC2);
+    control_gpio(TIM_OC3);
 
-    nvic_enable_irq(NVIC_EXTI2_3_IRQ);
-    // enable exti driver
-    exti_enable_request(TARGET_SW_EXTI);
-
+    nvic_enable_irq(NVIC_TIM1_CC_IRQ);
     init_timer(&motor_timer);
     timer_enable_pwm(&motor_timer, TIM_OC1);
     timer_enable_pwm(&motor_timer, TIM_OC2);
@@ -199,27 +208,15 @@ int main(void)
     timer_enable_pwm(&motor_timer, TIM_OC4);
     uint32_t period = timer_period(&motor_timer);
     printf("timer period = %lu\n", period);
-    timer_set_pwm_duty(&motor_timer, TIM_OC4, 1);
+    timer_set_pulse_width(&motor_timer, TIM_OC4, 1);
     timer_enable_irq(motor_timer.periph->base, TIM_DIER_CC4IE);
-    // timer_enable_irq(motor_timer.periph->base, TIM_DIER_UIE);
-#define SCB_SHPR(ipr_id)                MMIO8(SCS_BASE + 0xD18 + (ipr_id))
-    printf("systick prio = %d\n", SCB_SHPR((NVIC_SYSTICK_IRQ & 0xF) - 4));
-    nvic_set_priority(NVIC_SYSTICK_IRQ, 0x80);
-    printf("systick prio = %d\n", SCB_SHPR((NVIC_SYSTICK_IRQ & 0xF) - 4));
-    nvic_enable_irq(NVIC_TIM1_CC_IRQ);
-    // nvic_enable_irq(NVIC_TIM1_BRK_UP_TRG_COM_IRQ);
-    // nvic_enable_irq(NVIC_EXTI2_3_IRQ);
-
-    control_gpio(TIM_OC1);
-    control_gpio(TIM_OC2);
-    control_gpio(TIM_OC3);
 
     uint32_t next_time = system_millis;
 
     while (1) {
 
         if (system_millis >= next_time) {
-            next_time += 1000;
+            next_time += 100;
             dump_tim1_registers();
         }
     }

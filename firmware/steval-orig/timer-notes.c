@@ -43,7 +43,7 @@
 // TIM1->CR1=0x0001;
 //
 // // CCMR1 - Capture/Compare Mode Register 1
-// // note: b15 b7 and b7 are to enable ETR  based current limit
+// // note: b15 b7 and b7 are to enable ETR based current limit
 // //    bit 15 OC2CE:    output compare 2 clear enable
 // //    bits 14:12 OC2M: PWM mode 1
 // //    bit 11 OC1PE:    output compare 2 preload enable
@@ -53,7 +53,7 @@
 // TIM1->CCMR1= 0x6868 +b15 + b7;
 //
 // // CCMR2 - Capture/Compare Mode Register 2
-// // note: b15 b7 and b7 are to enable ETR  based current limit
+// // note: b15 b7 and b7 are to enable ETR based current limit
 // //    bits 14:12 OC4M: PWM mode 1
 // //    bit 11 OC3PE:    output compare 4 preload enable
 // //    bit 7 OC3CE:     output compare 3 clear enable
