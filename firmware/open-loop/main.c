@@ -6,6 +6,7 @@
 
 #include "math.h"
 #include "printf.h"
+#include "regdump.h"
 #include "systick.h"
 #include "usart.h"
 #include TARGET_H
@@ -154,25 +155,6 @@ extern void TARGET_sw_isr(void)
     assert(!timer_get_flag(TIM1, TIM_SR_UIF));
 }
 
-static void dump_tim1_registers(void)
-{
-    static bool been_here;
-    if (!been_here) {
-        been_here = true;
-        printf("\n\n\n\n\n");
-    }
-    printf("\33[A\33[A\33[A\33[A\33[A");
-    printf("TIM1 registers:\n");
-    printf("    CR1   %4lx  SR    %4lx  CCER  %4lx  RCR   %4lx  CCR4  %4lx\n",
-           TIM1_CR1,   TIM1_SR,    TIM1_CCER,  TIM1_RCR,   TIM1_CCR4);
-    printf("    CR2   %4lx  EGR   %4lx  CNT   %4lx  CCR1  %4lx  BDTR  %4lx\n",
-           TIM1_CR2,   TIM1_EGR,   TIM1_CNT,   TIM1_CCR1,  TIM1_BDTR);
-    printf("    SMCR  %4lx  CCMR1 %4lx  PSC   %4lx  CCR2  %4lx  DCR   %4lx\n",
-           TIM1_SMCR,  TIM1_CCMR1, TIM1_PSC,   TIM1_CCR2,  TIM1_DCR);
-    printf("    DIER  %4lx  CCMR2 %4lx  ARR   %4lx  CCR3  %4lx  DMAR  %4lx\n",
-           TIM1_DIER,  TIM1_CCMR2, TIM1_ARR,   TIM1_CCR3,  TIM1_DMAR);
-}
-
 int main(void)
 {
     rcc_clock_setup_in_hse_8mhz_out_48mhz();
@@ -215,7 +197,8 @@ int main(void)
 
         if (system_millis >= next_time) {
             next_time += 100;
-            dump_tim1_registers();
+            rewind_advanced_timer_registers();
+            dump_advanced_timer_registers(TARGET_advanced_timer.base);
         }
     }
 }

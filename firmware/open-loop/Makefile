@@ -23,7 +23,7 @@ OPENCM3_DIR := ../../submodules/libopencm3
 VPATH       := ../lib
 
 SOURCES     := main.c ee_printf.c gpio.c led.c math.c print-assert.c    \
-               systick.c timer.c usart.c steval-ihm043v1.c
+               regdump.c systick.c timer.c usart.c steval-ihm043v1.c
 OBJS        := $(patsubst ../lib/%,%,$(SOURCES:.c=.o))
 
 BINARY      := open-loop
