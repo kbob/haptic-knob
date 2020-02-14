@@ -27,9 +27,11 @@ extern const size_t             steval_ihm043v1_led_gpio_count;
 extern const USART_periph       steval_ihm043v1_USART;
 #define TARGET_USART            steval_ihm043v1_USART
 
-// Timer
+// Advanced Timer
 extern const timer_periph       steval_ihm043v1_advanced_timer;
 #define TARGET_advanced_timer   steval_ihm043v1_advanced_timer
+#define TARGET_ADVANCED_TIMER_UP_IRQ NVIC_TIM1_BRK_UP_TRG_COM_IRQ
+#define TARGET_advanced_timer_up_isr tim1_brk_up_trg_com_isr
 
 // Software Interrupt
 #define STEVAL_IHM043V1_SW_EXTI EXTI2

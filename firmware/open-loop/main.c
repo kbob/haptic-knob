@@ -1,7 +1,6 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/rcc.h>
 
 #include "math.h"
@@ -89,11 +88,12 @@ struct {
 
 // Compiling this function "-O3" makes it slower.  Reason unknown.
 __attribute__((optimize("O0")))
-extern void tim1_brk_up_trg_com_isr(void)
+extern void TARGET_advanced_timer_up_isr(void)
 {
-    timer_clear_flag(TIM1, TIM_SR_UIF);
+    uint32_t tim = TARGET_advanced_timer.base;
+    timer_clear_flag(tim, TIM_SR_UIF);
     tim_counter++;
-    assert(!timer_get_flag(TIM1, TIM_SR_UIF));
+    assert(!timer_get_flag(tim, TIM_SR_UIF));
 
     TARGET_trigger_sw_interrupt();
 
@@ -110,7 +110,7 @@ extern void tim1_brk_up_trg_com_isr(void)
         pwm_update.pending = false;
     }
 
-    assert(!timer_get_flag(TIM1, TIM_SR_UIF));
+    assert(!timer_get_flag(tim, TIM_SR_UIF));
 }
 
 __attribute__((optimize("O3")))
@@ -152,7 +152,7 @@ extern void TARGET_sw_isr(void)
     pwm_update.pending = true;
 
     // // If the update happened, we are too slow.
-    assert(!timer_get_flag(TIM1, TIM_SR_UIF));
+    assert(!timer_get_flag(TARGET_advanced_timer.base, TIM_SR_UIF));
 }
 
 int main(void)
@@ -166,7 +166,7 @@ int main(void)
     init_sin_table();
 
     // Timer update has highest priority, then systick, then SW interrupt.
-    nvic_set_priority(NVIC_TIM1_BRK_UP_TRG_COM_IRQ, 0x00);
+    nvic_set_priority(TARGET_ADVANCED_TIMER_UP_IRQ, 0x00);
     nvic_set_priority(NVIC_SYSTICK_IRQ, 0x40);
     nvic_set_priority(TARGET_SWINT_IRQ, 0xC0);
 
@@ -182,7 +182,7 @@ int main(void)
     control_gpio(TIM_OC2);
     control_gpio(TIM_OC3);
 
-    nvic_enable_irq(NVIC_TIM1_BRK_UP_TRG_COM_IRQ);
+    nvic_enable_irq(TARGET_ADVANCED_TIMER_UP_IRQ);
     init_timer(&motor_timer);
     timer_enable_pwm(&motor_timer, TIM_OC1);
     timer_enable_pwm(&motor_timer, TIM_OC2);
