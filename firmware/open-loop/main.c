@@ -115,7 +115,7 @@ extern void tim1_cc_isr(void)
 __attribute__((optimize("O3")))
 extern void TARGET_sw_isr(void)
 {
-    exti_reset_request(TARGET_SW_EXTI);
+    exti_reset_request(TARGET_SWINT_EXTI);
     sw_counter++;
     if (pwm_update.pending) {
         up_counter++;
@@ -186,11 +186,11 @@ int main(void)
     // Timer CC has highest priority, then systick, then SW interrupt.
     nvic_set_priority(NVIC_TIM1_CC_IRQ, 0x00);
     nvic_set_priority(NVIC_SYSTICK_IRQ, 0x40);
-    nvic_set_priority(NVIC_EXTI2_3_IRQ, 0xC0);
+    nvic_set_priority(TARGET_SWINT_IRQ, 0xC0);
 
-    // enable exti driver
-    nvic_enable_irq(NVIC_EXTI2_3_IRQ);
-    exti_enable_request(TARGET_SW_EXTI);
+    // enable software interrupt.
+    nvic_enable_irq(TARGET_SWINT_IRQ);
+    exti_enable_request(TARGET_SWINT_EXTI);
 
     // enable systick
     init_systick(rcc_ahb_frequency);

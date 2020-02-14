@@ -114,5 +114,5 @@ const timer_periph TARGET_advanced_timer = {
 
 void TARGET_trigger_sw_interrupt(void)
 {
-    EXTI_SWIER = TARGET_SW_EXTI;
+    EXTI_SWIER = TARGET_SWINT_EXTI;
 }
