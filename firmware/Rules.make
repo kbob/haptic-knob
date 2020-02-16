@@ -68,9 +68,9 @@ $(error Please specify it through OPENCM3_DIR variable!)
 endif
 endif
 
-ifeq ($(V),1)
-$(info Using $(OPENCM3_DIR) path to library)
-endif
+# ifeq ($(V),1)
+# $(info Using $(OPENCM3_DIR) path to library)
+# endif
 
 INCLUDE_DIR	= $(OPENCM3_DIR)/include
 LIB_DIR		= $(OPENCM3_DIR)/lib

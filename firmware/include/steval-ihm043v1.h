@@ -10,6 +10,7 @@
 #include <libopencm3/stm32/exti.h>
 
 #include "gpio.h"
+#include "l6234.h"
 #include "timer.h"
 #include "usart.h"
 
@@ -28,10 +29,14 @@ extern const USART_periph       steval_ihm043v1_USART;
 #define TARGET_USART            steval_ihm043v1_USART
 
 // Advanced Timer
-extern const timer_periph       steval_ihm043v1_advanced_timer;
+extern timer_periph             steval_ihm043v1_advanced_timer;
 #define TARGET_advanced_timer   steval_ihm043v1_advanced_timer
 #define TARGET_ADVANCED_TIMER_UP_IRQ NVIC_TIM1_BRK_UP_TRG_COM_IRQ
 #define TARGET_advanced_timer_up_isr tim1_brk_up_trg_com_isr
+
+// L6234 three-phase motor driver
+extern L6234_periph             steval_ihm043v1_L6234;
+#define TARGET_L6234            steval_ihm043v1_L6234
 
 // Software Interrupt
 #define STEVAL_IHM043V1_SW_EXTI EXTI2

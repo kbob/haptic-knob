@@ -10,21 +10,65 @@
 #include "usart.h"
 #include TARGET_H
 
+#undef OLD_MOTOR
+
 static const USART console_USART = {
-    .periph         = &TARGET_USART,
-    .baud           = 115200,
+    .periph           = &TARGET_USART,
+    .baud             = 115200,
 };
 
-static const timer motor_timer = {
-    .periph         = &TARGET_advanced_timer,
-    .pwm_freq       = 40000,
-    .enable_outputs = TOB_OC1N | TOB_OC2N | TOB_OC3N,
+#ifdef OLD_MOTOR
+
+static timer_config motor_timer_config = {
+    .pwm_freq         = 40000,
+    .enable_outputs   = TOB_OC1N | TOB_OC2N | TOB_OC3N,
 };
+
+static timer motor_timer = {
+    .periph           = &TARGET_advanced_timer,
+    .config           = &motor_timer_config,
+};
+
+#else
+
+static timer_config motor_timer_config = {
+    .pwm_freq         = 40000,
+    .enable_outputs   = TOB_OC1N | TOB_OC2N | TOB_OC3N,
+};
+
+static timer motor_timer = {
+    .periph           = &TARGET_advanced_timer,
+    .config           = &motor_timer_config,
+};
+
+static L6234_config motor_driver_config = {
+    // .timer = {
+    //     .pwm_freq = 40000,
+    //     .enable_outputs = TOB_OC1N | TOB_OC2N | TOB_OC3N,
+    // },
+    .speed_resolution = 80000,
+};
+
+static L6234 motor_driver = {
+    .periph           = &TARGET_L6234,
+    .config           = &motor_driver_config,
+    .timer            = &motor_timer,
+};
+
+#endif /* !OLD_MOTOR */
+
+// static const L6234_config L6234 = {
+//     .periph           = &TARGET_L6234,
+//     .pwm_frequency    = 40000,
+//     .speed_resolution = 80000,
+// };
 
 static void handle_systick(uint32_t millis)
 {
     millis = millis;            // -Wunused-parameter
 }
+
+#ifdef OLD_MOTOR
 
 static void control_gpio(enum tim_oc_id oc)
 {
@@ -40,9 +84,13 @@ static void control_gpio(enum tim_oc_id oc)
     gpio_init_pin(&g);
 }
 
+#endif
+
+#ifdef OLD_MOTOR
+
 // We generate 3 sine waves for the motor's 3 poles.  They are 120
 // degrees apart.  We subdivide the circle into six phases -- each
-// phase starts where one of the sines crosses zero: so at 0,npi/3,
+// phase starts where one of the sines crosses zero: so at 0, pi/3,
 // 2pi/3, pi, 4pi/3, and 5pi/3.
 //
 // `phase` goes from 0 to 5.  `muphase` (microphase) goes from 0
@@ -72,12 +120,12 @@ volatile uint32_t up_counter;
 
 // `pwm_update` passes data from SW interrupt to timer interrupt.
 //
-// Timer ISR may read all fields when `pending`is true,
+// Timer ISR may read all fields when `pending` is true,
 // must clear `pending`.
 //
 // Software ISR may read/write any fields when `pending` is false,
 // must write all fields before setting `pending`.
-struct {
+static struct {
     volatile bool pending;
     bool          phase_changed;
     uint32_t      width_a;
@@ -86,10 +134,13 @@ struct {
     uint32_t      positive_signals;
 } pwm_update;
 
+#endif
+
 // Compiling this function "-O3" makes it slower.  Reason unknown.
 __attribute__((optimize("O0")))
 extern void TARGET_advanced_timer_up_isr(void)
 {
+#ifdef OLD_MOTOR
     uint32_t tim = TARGET_advanced_timer.base;
     timer_clear_flag(tim, TIM_SR_UIF);
     tim_counter++;
@@ -111,11 +162,21 @@ extern void TARGET_advanced_timer_up_isr(void)
     }
 
     assert(!timer_get_flag(tim, TIM_SR_UIF));
+#else
+    uint32_t tim = motor_driver.periph->timer->base;
+    timer_clear_flag(tim, TIM_SR_UIF);
+    assert(!timer_get_flag(tim, TIM_SR_UIF));
+
+    L6234_handle_timer_interrupt(&motor_driver);
+
+    assert(!timer_get_flag(tim, TIM_SR_UIF));
+#endif
 }
 
 __attribute__((optimize("O3")))
 extern void TARGET_sw_isr(void)
 {
+#ifdef OLD_MOTOR
     exti_reset_request(TARGET_SWINT_EXTI);
     sw_counter++;
     if (pwm_update.pending) {
@@ -153,6 +214,13 @@ extern void TARGET_sw_isr(void)
 
     // // If the update happened, we are too slow.
     assert(!timer_get_flag(TARGET_advanced_timer.base, TIM_SR_UIF));
+#else
+    exti_reset_request(TARGET_SWINT_EXTI);
+
+    L6234_handle_sw_interrupt(&motor_driver);
+
+    assert(!timer_get_flag(motor_driver.periph->timer->base, TIM_SR_UIF));
+#endif
 }
 
 int main(void)
@@ -178,6 +246,7 @@ int main(void)
     init_systick(rcc_ahb_frequency);
     register_systick_handler(handle_systick);
 
+#ifdef OLD_MOTOR
     control_gpio(TIM_OC1);
     control_gpio(TIM_OC2);
     control_gpio(TIM_OC3);
@@ -190,6 +259,9 @@ int main(void)
     uint32_t period = timer_period(&motor_timer);
     printf("timer period = %lu\n", period);
     timer_enable_irq(motor_timer.periph->base, TIM_DIER_UIE);
+#else
+    init_L6234(&motor_driver);
+#endif
 
     uint32_t next_time = system_millis;
 

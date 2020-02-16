@@ -7,6 +7,7 @@
 void init_timer(const timer *tp)
 {
     const timer_periph *tpp = tp->periph;
+    const timer_config *cfg = tp->config;
     uint32_t tim = tpp->base;
     for (size_t i = 0; i < tpp->out_channel_count; i++) {
         assert(i == tpp->out_channels[i].id);
@@ -15,7 +16,7 @@ void init_timer(const timer *tp)
     rcc_periph_clock_enable(tpp->clock);
     for (size_t i = 0; i < tpp->out_channel_count; i++) {
         const timer_oc *op = &tpp->out_channels[i];
-        if (tp->enable_outputs & (1 << op->id))
+        if (cfg->enable_outputs & (1 << op->id))
             gpio_init_pin(&op->gpio);
     }
 
@@ -23,7 +24,7 @@ void init_timer(const timer *tp)
 
     for (size_t i = 0; i < tpp->out_channel_count; i++) {
         const timer_oc *op = &tpp->out_channels[i];
-        if (tp->enable_outputs & (1 << op->id)) {
+        if (cfg->enable_outputs & (1 << op->id)) {
             timer_enable_oc_preload(tim, op->id);
             timer_enable_oc_output(tim, op->id);
         }
@@ -35,7 +36,7 @@ void init_timer(const timer *tp)
 
 uint16_t timer_period(const timer *tp)
 {
-    uint32_t period = rcc_apb1_frequency / tp->pwm_freq;
+    uint32_t period = rcc_apb1_frequency / tp->config->pwm_freq;
     assert(period < 65536);
     return period;
 }

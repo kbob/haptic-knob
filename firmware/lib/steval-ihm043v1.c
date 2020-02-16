@@ -32,7 +32,7 @@ const USART_periph TARGET_USART = {
     },
 };
 
-static const timer_oc tim1_out_channels[] = {
+static timer_oc tim1_out_channels[] = {
     [TIM_OC1] = {               // PA8 AF2 TIM1_CH1 -> L6234 INA
         .id          = TIM_OC1,
         .is_inverted = false,
@@ -105,11 +105,44 @@ static const timer_oc tim1_out_channels[] = {
     },
 };
 
-const timer_periph TARGET_advanced_timer = {
+timer_periph TARGET_advanced_timer = {
     .base       = TIM1,
     .clock      = RCC_TIM1,
     .out_channels = tim1_out_channels,
     .out_channel_count = ARRAY_COUNT(tim1_out_channels),
+};
+
+L6234_periph TARGET_L6234 = {
+    .timer = &TARGET_advanced_timer,
+    .channels = {
+        [0] = {
+            .id = TIM_OC1,
+            .pin = {
+                .gp_port = GPIOA,
+                .gp_pin  = GPIO8,
+                .gp_mode = GPIO_MODE_AF,
+                .gp_af   = GPIO_AF2,
+            },
+         },
+         [1] = {
+             .id = TIM_OC2,
+             .pin = {
+                 .gp_port = GPIOA,
+                 .gp_pin  = GPIO9,
+                 .gp_mode = GPIO_MODE_AF,
+                 .gp_af   = GPIO_AF2,
+             },
+          },
+          [2] = {
+              .id = TIM_OC3,
+              .pin = {
+                  .gp_port = GPIOA,
+                  .gp_pin  = GPIO10,
+                  .gp_mode = GPIO_MODE_AF,
+                  .gp_af   = GPIO_AF2,
+              },
+           },
+    },
 };
 
 void TARGET_trigger_sw_interrupt(void)

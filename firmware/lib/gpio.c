@@ -8,7 +8,7 @@
 
 static uint16_t gpio_pins_used[GPIO_PORT_COUNT];
 
-static uint32_t gpio_clocks[] = {
+static const uint32_t gpio_clocks[] = {
     RCC_GPIOA,
     RCC_GPIOB,
     RCC_GPIOC,
