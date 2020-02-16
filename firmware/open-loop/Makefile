@@ -24,7 +24,7 @@ VPATH       := ../lib
 
 SOURCES     := main.c ee_printf.c gpio.c l6234.c led.c math.c           \
                print-assert.c regdump.c systick.c timer.c usart.c       \
-	       steval-ihm043v1.c
+               steval-ihm043v1.c
 OBJS        := $(patsubst ../lib/%,%,$(SOURCES:.c=.o))
 
 BINARY      := open-loop
@@ -33,8 +33,12 @@ LDSCRIPT    := ../stm32f0-steval.ld
 
 include ../Generic.make
 
-CPPFLAGS    += \
-               -Wno-parentheses -Wno-array-bounds \
-               -Werror -Wno-error=char-subscripts \
+CPPFLAGS    +=                                                          \
+               -Wno-array-bounds                                        \
+               -Wno-attributes                                          \
+               -Wno-parentheses                                         \
+               -Werror                                                  \
+               -Wno-error=char-subscripts                               \
                -std=gnu11
+
 CPPFLAGS    += -iquote ../include -DTARGET_H='"steval-ihm043v1.h"'

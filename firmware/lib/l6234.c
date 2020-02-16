@@ -118,8 +118,14 @@ void L6234_handle_timer_interrupt(L6234_periph *lpp)
     }
 }
 
-// Compiling this function "-O3" makes it slower.  Reason unknown.
-__attribute__((optimize("O0")))
+// faster on MCU with no divide instruction
+__attribute__((always_inline))
+static uint16_t div6(uint16_t n)
+{
+    return (uint32_t)n * 43691 >> 18;
+}
+
+__attribute__((optimize("O3")))
 void L6234_handle_sw_interrupt(L6234_periph *lpp)
 {
     if (pwm_update.pending)
@@ -140,13 +146,13 @@ void L6234_handle_sw_interrupt(L6234_periph *lpp)
 
     // XXX calc once
     // XXX add amplitude parameter
-    // XXX `x / 6` is equivalent to `x * 43691 >> 18` for uint16_t x.
     uint32_t period  = timer_period(lpp->timer);
-    int32_t  angle_a = (muphase + 0 * 1024) / 6;
+
+    int32_t  angle_a = div6(muphase + 0 * 1024);
     uint16_t width_a = (abs(sini16(angle_a)) * (period - 2)) >> 15;
-    int32_t  angle_b = (muphase + 2 * 1024) / 6;
+    int32_t  angle_b = div6(muphase + 2 * 1024);
     uint16_t width_b = (abs(sini16(angle_b)) * (period - 2)) >> 15;
-    int32_t  angle_c = (muphase + 4 * 1024) / 6;
+    int32_t  angle_c = div6(muphase + 4 * 1024);
     uint16_t width_c = (abs(sini16(angle_c)) * (period - 2)) >> 15;
 
     pwm_update.width_a = width_a;
