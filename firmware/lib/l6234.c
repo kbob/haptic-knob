@@ -29,7 +29,7 @@ static uint32_t muphase;
 
 static uint32_t phase_positive[6];
 
-static void init_phase_mask(L6234_channel chan[3])
+static void init_phase_masks(L6234_channel chan[3])
 {
     uint32_t pin_a = chan[0].dir_pin.gp_pin;
     uint32_t pin_b = chan[1].dir_pin.gp_pin;
@@ -59,6 +59,9 @@ static struct {
     uint32_t      positive_signals;
 } pwm_update;
 
+// We program the direction inputs (INA, INB and INC) through the
+// GPIO interface.  So long as all three are on the same port, we
+// can do it with a single register read-modify-write.
 static uint32_t dir_gpio_port;
 static uint32_t dir_pin_mask;
 
@@ -77,7 +80,7 @@ void init_L6234(L6234_periph *lpp, L6234_config *cfg)
         assert(pin->gp_port == dir_gpio_port);
         dir_pin_mask |= pin->gp_pin;
     }
-    init_phase_mask(lpp->channels);
+    init_phase_masks(lpp->channels);
     nvic_enable_irq(TARGET_ADVANCED_TIMER_UP_IRQ);
     enum tim_oc_id ena_a_id = lpc[0].ena_id;
     enum tim_oc_id ena_b_id = lpc[1].ena_id;
@@ -87,23 +90,15 @@ void init_L6234(L6234_periph *lpp, L6234_config *cfg)
         .enable_outputs = 1 << ena_a_id | 1 << ena_b_id | 1 << ena_c_id,
     };
     init_timer(tpp, &tim_cfg);
-    // XXX use channels[].id
     timer_enable_pwm(tpp, ena_a_id);
     timer_enable_pwm(tpp, ena_b_id);
     timer_enable_pwm(tpp, ena_c_id);
-    // uint32_t period = timer_period(lpp->timer);
-    // printf("timer period = %lu\n", period);
     timer_enable_irq(tpp->base, TIM_DIER_UIE);
-    // printf("GPIOA = %08x; gpio_port = %08lx\n", GPIOA, gpio_port);
-    // printf("ODR = %p\n", &GPIO_ODR(gpio_port));
 }
 
-volatile uint32_t up_counter;
-volatile uint32_t sw_counter;
-
+__attribute__((optimize("O3")))
 void L6234_handle_timer_interrupt(L6234_periph *lpp)
 {
-    up_counter++;
     L6234_channel *lpc = lpp->channels;
     timer_periph *tpp = lpp->timer;
 
@@ -123,9 +118,10 @@ void L6234_handle_timer_interrupt(L6234_periph *lpp)
     }
 }
 
+// Compiling this function "-O3" makes it slower.  Reason unknown.
+__attribute__((optimize("O0")))
 void L6234_handle_sw_interrupt(L6234_periph *lpp)
 {
-    sw_counter++;
     if (pwm_update.pending)
         return;
 

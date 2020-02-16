@@ -9,6 +9,7 @@
 
 #include "gpio.h"
 
+
 typedef enum timer_output_bits {
     TOB_OC1  = 1 << TIM_OC1,
     TOB_OC1N = 1 << TIM_OC1N,
@@ -42,11 +43,6 @@ typedef const struct timer_config {
     timer_output_bits enable_outputs;
 } timer_config;
 
-// // `timer` joins `timer_periph` (hardware) with `timer_config` (app).
-// typedef const struct timer {
-//     timer_periph     *periph;
-//     timer_config     *config;
-// } timer;
 
 extern void init_timer(timer_periph *, timer_config *);
 extern uint32_t timer_period(timer_periph *);
