@@ -31,9 +31,9 @@ static uint32_t phase_positive[6];
 
 static void init_phase_mask(L6234_channel chan[3])
 {
-    uint32_t pin_a = chan[0].pin.gp_pin;
-    uint32_t pin_b = chan[1].pin.gp_pin;
-    uint32_t pin_c = chan[2].pin.gp_pin;
+    uint32_t pin_a = chan[0].dir_pin.gp_pin;
+    uint32_t pin_b = chan[1].dir_pin.gp_pin;
+    uint32_t pin_c = chan[2].dir_pin.gp_pin;
 
     phase_positive[0] = pin_a | pin_b;
     phase_positive[1] = pin_a;
@@ -59,8 +59,8 @@ static struct {
     uint32_t      positive_signals;
 } pwm_update;
 
-static uint32_t gpio_port;
-static uint32_t gpio_signal_mask;
+static uint32_t dir_gpio_port;
+static uint32_t dir_pin_mask;
 
 void init_L6234(L6234_periph *lpp, L6234_config *cfg)
 {
@@ -68,25 +68,29 @@ void init_L6234(L6234_periph *lpp, L6234_config *cfg)
     assert(!been_here && "Only one L6234 supported");
     been_here = true;
     timer_periph *tpp = lpp->timer;
+    L6234_channel *lpc = lpp->channels;
 
-    gpio_port = lpp->channels[0].pin.gp_port;
+    dir_gpio_port = lpp->channels[0].dir_pin.gp_port;
     for (size_t i = 0; i < 3; i++) {
-        const gpio_pin *pin = &lpp->channels[i].pin;
+        const gpio_pin *pin = &lpc[i].dir_pin;
         gpio_init_pin(pin);
-        assert(pin->gp_port == gpio_port);
-        gpio_signal_mask |= pin->gp_pin;
+        assert(pin->gp_port == dir_gpio_port);
+        dir_pin_mask |= pin->gp_pin;
     }
     init_phase_mask(lpp->channels);
     nvic_enable_irq(TARGET_ADVANCED_TIMER_UP_IRQ);
+    enum tim_oc_id ena_a_id = lpc[0].ena_id;
+    enum tim_oc_id ena_b_id = lpc[1].ena_id;
+    enum tim_oc_id ena_c_id = lpc[2].ena_id;
     timer_config tim_cfg = {
         .pwm_frequency = cfg->pwm_frequency,
-        .enable_outputs = TOB_OC1N | TOB_OC2N | TOB_OC3N,
+        .enable_outputs = 1 << ena_a_id | 1 << ena_b_id | 1 << ena_c_id,
     };
     init_timer(tpp, &tim_cfg);
     // XXX use channels[].id
-    timer_enable_pwm(tpp, TIM_OC1);
-    timer_enable_pwm(tpp, TIM_OC2);
-    timer_enable_pwm(tpp, TIM_OC3);
+    timer_enable_pwm(tpp, ena_a_id);
+    timer_enable_pwm(tpp, ena_b_id);
+    timer_enable_pwm(tpp, ena_c_id);
     // uint32_t period = timer_period(lpp->timer);
     // printf("timer period = %lu\n", period);
     timer_enable_irq(tpp->base, TIM_DIER_UIE);
@@ -106,14 +110,14 @@ void L6234_handle_timer_interrupt(L6234_periph *lpp)
     TARGET_trigger_sw_interrupt();
 
     if (pwm_update.pending) {
-        timer_set_pulse_width(tpp, lpc[0].id, pwm_update.width_a);
-        timer_set_pulse_width(tpp, lpc[1].id, pwm_update.width_b);
-        timer_set_pulse_width(tpp, lpc[2].id, pwm_update.width_c);
+        timer_set_pulse_width(tpp, lpc[0].ena_id, pwm_update.width_a);
+        timer_set_pulse_width(tpp, lpc[1].ena_id, pwm_update.width_b);
+        timer_set_pulse_width(tpp, lpc[2].ena_id, pwm_update.width_c);
         if (pwm_update.phase_changed) {
-            uint32_t odr = GPIO_ODR(gpio_port);
-            odr &= ~gpio_signal_mask;
+            uint32_t odr = GPIO_ODR(dir_gpio_port);
+            odr &= ~dir_pin_mask;
             odr |= pwm_update.positive_signals;
-            GPIO_ODR(gpio_port) = odr;
+            GPIO_ODR(dir_gpio_port) = odr;
         }
         pwm_update.pending = false;
     }

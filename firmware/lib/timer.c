@@ -4,6 +4,16 @@
 
 #include <libopencm3/stm32/rcc.h>
 
+static const enum tim_oc_id oc_primary_map[] = {
+    [TIM_OC1]  = TIM_OC1,
+    [TIM_OC1N] = TIM_OC1,
+    [TIM_OC2]  = TIM_OC2,
+    [TIM_OC2N] = TIM_OC2,
+    [TIM_OC3]  = TIM_OC3,
+    [TIM_OC3N] = TIM_OC3,
+    [TIM_OC4]  = TIM_OC4,
+};
+
 void init_timer(const timer_periph *tpp, timer_config *cfg)
 {
     uint32_t tim = tpp->base;
@@ -41,20 +51,20 @@ uint32_t timer_period(timer_periph *tpp)
 
 void timer_force_output_high(timer_periph *tpp, enum tim_oc_id oc)
 {
-    timer_set_oc_mode(tpp->base, oc, TIM_OCM_FORCE_HIGH);
+    timer_set_oc_mode(tpp->base, oc_primary_map[oc], TIM_OCM_FORCE_HIGH);
 }
 
 void timer_force_output_low(timer_periph *tpp, enum tim_oc_id oc)
 {
-    timer_set_oc_mode(tpp->base, oc, TIM_OCM_FORCE_LOW);
+    timer_set_oc_mode(tpp->base, oc_primary_map[oc], TIM_OCM_FORCE_LOW);
 }
 
 void timer_enable_pwm(timer_periph *tpp, enum tim_oc_id oc)
 {
-    timer_set_oc_mode(tpp->base, oc, TIM_OCM_PWM1);
+    timer_set_oc_mode(tpp->base, oc_primary_map[oc], TIM_OCM_PWM1);
 }
 
 void timer_set_pulse_width(timer_periph *tpp, enum tim_oc_id oc, uint16_t width)
 {
-    timer_set_oc_value(tpp->base, oc, width);
+    timer_set_oc_value(tpp->base, oc_primary_map[oc], width);
 }

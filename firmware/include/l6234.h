@@ -11,8 +11,8 @@
 #include "timer.h"
 
 typedef const struct L6234_channel {
-    enum tim_oc_id id;
-    gpio_pin       pin;
+    enum tim_oc_id ena_id;
+    gpio_pin       dir_pin;
 } L6234_channel;
 
 // `L6234_periph` describe the L6234 hardware (both chip and board).

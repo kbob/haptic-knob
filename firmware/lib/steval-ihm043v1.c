@@ -113,27 +113,27 @@ timer_periph TARGET_advanced_timer = {
 };
 
 L6234_periph TARGET_L6234 = {
-    .timer = &TARGET_advanced_timer,
+    .timer               = &TARGET_advanced_timer,
     .channels = {
         [0] = {
-            .id = TIM_OC1,
-            .pin = {
+            .ena_id      = TIM_OC1N,
+            .dir_pin     = {
                 .gp_port = GPIOA,
                 .gp_pin  = GPIO8,
                 .gp_mode = GPIO_MODE_OUTPUT,
             },
         },
         [1] = {
-            .id = TIM_OC2,
-            .pin = {
+            .ena_id      = TIM_OC2N,
+            .dir_pin     = {
                 .gp_port = GPIOA,
                 .gp_pin  = GPIO9,
                 .gp_mode = GPIO_MODE_OUTPUT,
             },
         },
         [2] = {
-            .id = TIM_OC3,
-            .pin = {
+            .ena_id      = TIM_OC3N,
+            .dir_pin     = {
                 .gp_port = GPIOA,
                 .gp_pin  = GPIO10,
                 .gp_mode = GPIO_MODE_OUTPUT,
