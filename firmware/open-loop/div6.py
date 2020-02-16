@@ -1,17 +1,18 @@
 from math import log2
 
-divisor = 6
-dividend_max = 6 * 1024
+divisor = 3
+dividend_max = 5 * 1024
+dividend_max = 65535
 
 def test_m(m):
-    s0 = int(log2(m / (1/6)))
+    s0 = int(log2(m / (1/divisor)))
     # print(f'm={m} s0={s0}')
     s1 = s0 + 1
     for dividend in range(dividend_max):
         xq = dividend // divisor
         aq = dividend * m >> s0
         if xq != aq:
-            return
+            return False
     # print(f'OK: m={m} s={s0}')
     return True
 

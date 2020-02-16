@@ -38,23 +38,23 @@ typedef const struct timer_periph {
 // `timer_config` describes how an app uses a timer.  PWM frequency,
 // outputs n use...
 typedef const struct timer_config {
-    uint32_t          pwm_freq;
+    uint32_t          pwm_frequency;
     timer_output_bits enable_outputs;
 } timer_config;
 
-// `timer` joins `timer_periph` (hardware) with `timer_config` (app).
-typedef const struct timer {
-    timer_periph     *periph;
-    timer_config     *config;
-} timer;
+// // `timer` joins `timer_periph` (hardware) with `timer_config` (app).
+// typedef const struct timer {
+//     timer_periph     *periph;
+//     timer_config     *config;
+// } timer;
 
-extern void init_timer(timer *);
-extern uint16_t timer_period(timer *);
+extern void init_timer(timer_periph *, timer_config *);
+extern uint32_t timer_period(timer_periph *);
 
-extern void timer_force_output_high(timer *, enum tim_oc_id);
-extern void timer_force_output_low(timer *, enum tim_oc_id);
-extern void timer_enable_pwm(timer *, enum tim_oc_id);
+extern void timer_force_output_high(timer_periph *, enum tim_oc_id);
+extern void timer_force_output_low(timer_periph *, enum tim_oc_id);
+extern void timer_enable_pwm(timer_periph *, enum tim_oc_id);
 
-extern void timer_set_pulse_width(timer *, enum tim_oc_id, uint16_t wid);
+extern void timer_set_pulse_width(timer_periph *, enum tim_oc_id, uint16_t wid);
 
 #endif /* !TIMER_included */

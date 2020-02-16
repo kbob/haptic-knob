@@ -4,10 +4,8 @@
 
 #include <libopencm3/stm32/rcc.h>
 
-void init_timer(const timer *tp)
+void init_timer(const timer_periph *tpp, timer_config *cfg)
 {
-    const timer_periph *tpp = tp->periph;
-    const timer_config *cfg = tp->config;
     uint32_t tim = tpp->base;
     for (size_t i = 0; i < tpp->out_channel_count; i++) {
         assert(i == tpp->out_channels[i].id);
@@ -20,7 +18,9 @@ void init_timer(const timer *tp)
             gpio_init_pin(&op->gpio);
     }
 
-    timer_set_period(tim, timer_period(tp));
+    uint32_t period = rcc_apb1_frequency / cfg->pwm_frequency;
+    assert(period <= 65536);
+    timer_set_period(tim, period - 1);
 
     for (size_t i = 0; i < tpp->out_channel_count; i++) {
         const timer_oc *op = &tpp->out_channels[i];
@@ -34,29 +34,27 @@ void init_timer(const timer *tp)
     timer_enable_counter(tim);
 }
 
-uint16_t timer_period(const timer *tp)
+uint32_t timer_period(timer_periph *tpp)
 {
-    uint32_t period = rcc_apb1_frequency / tp->config->pwm_freq;
-    assert(period < 65536);
-    return period;
+    return TIM_ARR(tpp->base) + 1;
 }
 
-void timer_force_output_high(const timer *tp, enum tim_oc_id oc)
+void timer_force_output_high(timer_periph *tpp, enum tim_oc_id oc)
 {
-    timer_set_oc_mode(tp->periph->base, oc, TIM_OCM_FORCE_HIGH);
+    timer_set_oc_mode(tpp->base, oc, TIM_OCM_FORCE_HIGH);
 }
 
-void timer_force_output_low(const timer *tp, enum tim_oc_id oc)
+void timer_force_output_low(timer_periph *tpp, enum tim_oc_id oc)
 {
-    timer_set_oc_mode(tp->periph->base, oc, TIM_OCM_FORCE_LOW);
+    timer_set_oc_mode(tpp->base, oc, TIM_OCM_FORCE_LOW);
 }
 
-void timer_enable_pwm(const timer *tp, enum tim_oc_id oc)
+void timer_enable_pwm(timer_periph *tpp, enum tim_oc_id oc)
 {
-    timer_set_oc_mode(tp->periph->base, oc, TIM_OCM_PWM1);
+    timer_set_oc_mode(tpp->base, oc, TIM_OCM_PWM1);
 }
 
-void timer_set_pulse_width(const timer *tp, enum tim_oc_id oc, uint16_t width)
+void timer_set_pulse_width(timer_periph *tpp, enum tim_oc_id oc, uint16_t width)
 {
-    timer_set_oc_value(tp->periph->base, oc, width);
+    timer_set_oc_value(tpp->base, oc, width);
 }

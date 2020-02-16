@@ -232,6 +232,24 @@ int main(void)
     nvic_disable_irq(NVIC_SYSTICK_IRQ);
     nvic_disable_irq(NVIC_EXTI2_3_IRQ);
 
+    uint32_t before = STK_CVR;
+    uint32_t a = cc_counter & 0xFFFF;
+    volatile uint32_t z = a / 6;
+    uint32_t after = STK_CVR;
+    uint32_t duration = before - after;
+    if (duration > 48000)
+        duration += 48001;
+    printf("divide by 6: z = %ld, cycles = %ld\n", z, duration);
+
+    before = STK_CVR;
+    a = swint_counter & 0xFFFF;
+    z = a * 43691 >> 18;
+    after = STK_CVR;
+    duration = before - after;
+    if (duration > 48000)
+        duration += 48001;
+    printf("mul shift:   z = %ld, cycles = %ld\n", z, duration);
+
     lines = 0;
     histogram h;
     atomic_copy_histogram(&cc_hist, &h);

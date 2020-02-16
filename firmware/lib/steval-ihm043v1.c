@@ -120,28 +120,25 @@ L6234_periph TARGET_L6234 = {
             .pin = {
                 .gp_port = GPIOA,
                 .gp_pin  = GPIO8,
-                .gp_mode = GPIO_MODE_AF,
-                .gp_af   = GPIO_AF2,
+                .gp_mode = GPIO_MODE_OUTPUT,
             },
-         },
-         [1] = {
-             .id = TIM_OC2,
-             .pin = {
-                 .gp_port = GPIOA,
-                 .gp_pin  = GPIO9,
-                 .gp_mode = GPIO_MODE_AF,
-                 .gp_af   = GPIO_AF2,
-             },
-          },
-          [2] = {
-              .id = TIM_OC3,
-              .pin = {
-                  .gp_port = GPIOA,
-                  .gp_pin  = GPIO10,
-                  .gp_mode = GPIO_MODE_AF,
-                  .gp_af   = GPIO_AF2,
-              },
-           },
+        },
+        [1] = {
+            .id = TIM_OC2,
+            .pin = {
+                .gp_port = GPIOA,
+                .gp_pin  = GPIO9,
+                .gp_mode = GPIO_MODE_OUTPUT,
+            },
+        },
+        [2] = {
+            .id = TIM_OC3,
+            .pin = {
+                .gp_port = GPIOA,
+                .gp_pin  = GPIO10,
+                .gp_mode = GPIO_MODE_OUTPUT,
+            },
+        },
     },
 };
 

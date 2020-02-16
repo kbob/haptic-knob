@@ -31,29 +31,30 @@ static timer motor_timer = {
 
 #else
 
-static timer_config motor_timer_config = {
-    .pwm_freq         = 40000,
-    .enable_outputs   = TOB_OC1N | TOB_OC2N | TOB_OC3N,
-};
-
-static timer motor_timer = {
-    .periph           = &TARGET_advanced_timer,
-    .config           = &motor_timer_config,
-};
-
-static L6234_config motor_driver_config = {
+// static timer_config motor_timer_config = {
+//     .pwm_freq         = 40000,
+//     .enable_outputs   = TOB_OC1N | TOB_OC2N | TOB_OC3N,
+// };
+//
+// static timer motor_timer = {
+//     .periph           = &TARGET_advanced_timer,
+//     .config           = &motor_timer_config,
+// };
+//
+static L6234_config motor_config = {
     // .timer = {
     //     .pwm_freq = 40000,
     //     .enable_outputs = TOB_OC1N | TOB_OC2N | TOB_OC3N,
     // },
+    .pwm_frequency    = 40000,
     .speed_resolution = 80000,
 };
 
-static L6234 motor_driver = {
-    .periph           = &TARGET_L6234,
-    .config           = &motor_driver_config,
-    .timer            = &motor_timer,
-};
+// static L6234 motor_driver = {
+//     .periph           = &TARGET_L6234,
+//     .config           = &motor_driver_config,
+//     .timer            = &motor_timer,
+// };
 
 #endif /* !OLD_MOTOR */
 
@@ -163,11 +164,11 @@ extern void TARGET_advanced_timer_up_isr(void)
 
     assert(!timer_get_flag(tim, TIM_SR_UIF));
 #else
-    uint32_t tim = motor_driver.periph->timer->base;
+    uint32_t tim = TARGET_L6234.timer->base;
     timer_clear_flag(tim, TIM_SR_UIF);
     assert(!timer_get_flag(tim, TIM_SR_UIF));
 
-    L6234_handle_timer_interrupt(&motor_driver);
+    L6234_handle_timer_interrupt(&TARGET_L6234);
 
     assert(!timer_get_flag(tim, TIM_SR_UIF));
 #endif
@@ -199,6 +200,7 @@ extern void TARGET_sw_isr(void)
 
     // XXX calc once
     // XXX add amplitude parameter
+    // XXX `x / 6` is equivalent to `x * 43691 >> 18` for uint16_t x.
     uint32_t period  = timer_period(&motor_timer);
     int32_t  angle_a = (muphase + 0 * 1024) / 6;
     uint16_t width_a = (abs(sini16(angle_a)) * (period - 2)) >> 15;
@@ -217,9 +219,9 @@ extern void TARGET_sw_isr(void)
 #else
     exti_reset_request(TARGET_SWINT_EXTI);
 
-    L6234_handle_sw_interrupt(&motor_driver);
+    L6234_handle_sw_interrupt(&TARGET_L6234);
 
-    assert(!timer_get_flag(motor_driver.periph->timer->base, TIM_SR_UIF));
+    assert(!timer_get_flag(TARGET_L6234.timer->base, TIM_SR_UIF));
 #endif
 }
 
@@ -260,7 +262,7 @@ int main(void)
     printf("timer period = %lu\n", period);
     timer_enable_irq(motor_timer.periph->base, TIM_DIER_UIE);
 #else
-    init_L6234(&motor_driver);
+    init_L6234(&TARGET_L6234, &motor_config);
 #endif
 
     uint32_t next_time = system_millis;
@@ -270,7 +272,7 @@ int main(void)
         if (system_millis >= next_time) {
             next_time += 100;
             rewind_advanced_timer_registers();
-            dump_advanced_timer_registers(TARGET_advanced_timer.base);
+            dump_advanced_timer_registers(TARGET_L6234.timer->base);
         }
     }
 }
