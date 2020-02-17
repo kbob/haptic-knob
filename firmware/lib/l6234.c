@@ -26,8 +26,8 @@
 // pins.
 static uint8_t phase;
 static uint32_t muphase;
-
 static uint32_t phase_positive[6];
+static int16_t amplitude = 32767;
 
 static void init_phase_masks(L6234_channel chan[3])
 {
@@ -41,6 +41,18 @@ static void init_phase_masks(L6234_channel chan[3])
     phase_positive[3] =                 pin_c;
     phase_positive[4] =         pin_b | pin_c;
     phase_positive[5] =         pin_b;
+}
+
+void L6234_set_amplitude(L6234_periph *lpp, int16_t a)
+{
+    lpp = lpp;                  // -Wunused-parameter
+    amplitude = a;
+}
+
+void L6234_set_position(L6234_periph *lpp, int32_t position)
+{
+    lpp = lpp;                  // -Wunused-parameter
+    muphase = position;
 }
 
 // `pwm_update` passes data from SW interrupt to timer interrupt.
@@ -125,15 +137,15 @@ static uint16_t div6(uint16_t n)
     return (uint32_t)n * 43691 >> 18;
 }
 
-__attribute__((optimize("O3")))
+__attribute__((optimize("O0")))
 void L6234_handle_sw_interrupt(L6234_periph *lpp)
 {
     if (pwm_update.pending)
         return;
 
-    muphase += 102;
-    if (muphase >= (6 << CIRCLE_BITS))
-        muphase -= (6 << CIRCLE_BITS);
+    // muphase += 102;
+    // if (muphase >= (6 << CIRCLE_BITS))
+    //     muphase -= (6 << CIRCLE_BITS);
     uint8_t nphase = muphase >> CIRCLE_BITS;
 
     if (phase == nphase) {
@@ -146,14 +158,16 @@ void L6234_handle_sw_interrupt(L6234_periph *lpp)
 
     // XXX calc once
     // XXX add amplitude parameter
-    uint32_t period  = timer_period(lpp->timer);
+    assert(amplitude >= 0); // XXX negative amplitude not implemented yet
+    int32_t period   = timer_period(lpp->timer);
+    int32_t scale    = (amplitude * period) >> 15;
 
     int32_t  angle_a = div6(muphase + 0 * 1024);
-    uint16_t width_a = (abs(sini16(angle_a)) * (period - 2)) >> 15;
+    uint16_t width_a = (abs(sini16(angle_a)) * (scale - 2)) >> 15;
     int32_t  angle_b = div6(muphase + 2 * 1024);
-    uint16_t width_b = (abs(sini16(angle_b)) * (period - 2)) >> 15;
+    uint16_t width_b = (abs(sini16(angle_b)) * (scale - 2)) >> 15;
     int32_t  angle_c = div6(muphase + 4 * 1024);
-    uint16_t width_c = (abs(sini16(angle_c)) * (period - 2)) >> 15;
+    uint16_t width_c = (abs(sini16(angle_c)) * (scale - 2)) >> 15;
 
     pwm_update.width_a = width_a;
     pwm_update.width_b = width_b;
